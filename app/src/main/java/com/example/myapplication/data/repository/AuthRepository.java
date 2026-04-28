@@ -98,17 +98,77 @@ public class AuthRepository {
                     FirebaseUser user = authResult.getUser();
                     if (user != null && !user.isEmailVerified()) {
                         auth.signOut();
-                        onFailure.onFailure(new Exception("Verifikujte email adresu prvo."));
+                        onFailure.onFailure(new Exception("Please verify your email before logging in."));
                     } else {
-                        onSuccess.onSuccess(null);
+                        checkAndAwardDailyReward(user.getUid(), onSuccess, onFailure);
                     }
                 })
                 .addOnFailureListener(onFailure);
     }
-    // --- GUEST ---
-    public boolean isLoggedIn() {
-        return auth.getCurrentUser() != null && auth.getCurrentUser().isEmailVerified();
+    public void loginAsGuest(OnSuccessListener<String> onSuccess, OnFailureListener onFailure) {
+        auth.signInAnonymously()
+                .addOnSuccessListener(authResult -> {
+                    FirebaseUser firebaseUser = authResult.getUser();
+                    String uid = firebaseUser.getUid();
+
+                    // Use first 8 chars of Firebase uid as guest name
+                    String guestName = "Guest_" + uid.substring(0, 8);
+
+                    User guestUser = new User();
+                    guestUser.setUsername(guestName);
+
+                    db.collection("users").document(uid)
+                            .set(guestUser)
+                            .addOnSuccessListener(unused -> onSuccess.onSuccess(guestName))
+                            .addOnFailureListener(onFailure);
+                })
+                .addOnFailureListener(e ->
+                        onFailure.onFailure(new Exception("Could not continue as guest: " + e.getMessage()))
+                );
     }
+
+    private void checkAndAwardDailyReward(String uid,
+                                          OnSuccessListener<Void> onSuccess,
+                                          OnFailureListener onFailure) {
+        db.collection("users").document(uid)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists()) {
+                        onSuccess.onSuccess(null);
+                        return;
+                    }
+
+                    long now = System.currentTimeMillis();
+                    Long lastLogin = snapshot.getLong("lastLoginTime");
+
+                    // Check if 24 hours have passed since last login
+                    boolean shouldAward = lastLogin == null ||
+                            (now - lastLogin) >= 24 * 60 * 60 * 1000L;
+
+                    if (shouldAward) {
+                        // Get current tokens and increment by 5
+                        Long currentTokens = snapshot.getLong("tokens");
+                        long newTokens = (currentTokens != null ? currentTokens : 0) + 5;
+
+                        // Update tokens and lastLoginTime in one call
+                        db.collection("users").document(uid)
+                                .update(
+                                        "tokens", newTokens,
+                                        "lastLoginTime", now
+                                )
+                                .addOnSuccessListener(onSuccess)
+                                .addOnFailureListener(onFailure);
+                    } else {
+                        // No reward but still update lastLoginTime
+                        db.collection("users").document(uid)
+                                .update("lastLoginTime", now)
+                                .addOnSuccessListener(onSuccess)
+                                .addOnFailureListener(onFailure);
+                    }
+                })
+                .addOnFailureListener(onFailure);
+    }
+
 
     public void logout() {
         auth.signOut();

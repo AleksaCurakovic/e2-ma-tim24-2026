@@ -1,5 +1,7 @@
 package com.example.myapplication.presentation.viewModel;
 
+import android.util.Log;
+
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
@@ -14,6 +16,9 @@ public class AuthViewModel extends ViewModel {
     public final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     public final MutableLiveData<Boolean> registerSuccess = new MutableLiveData<>();
     public final MutableLiveData<Boolean> loginSuccess = new MutableLiveData<>();
+
+    public final MutableLiveData<Boolean> guestLoginSuccess = new MutableLiveData<>();
+
 
     public void register(String email, String username, String region, String password, String repeatPassword) {
         if (!password.equals(repeatPassword)) {
@@ -55,7 +60,18 @@ public class AuthViewModel extends ViewModel {
                 });
     }
 
-    public boolean isLoggedIn() {
-        return repository.isLoggedIn();
+    public void loginAsGuest() {
+        isLoading.setValue(true);
+        repository.loginAsGuest(
+                guestName -> {
+                    isLoading.setValue(false);
+                    guestLoginSuccess.setValue(true);
+                },
+                e -> {
+                    isLoading.setValue(false);
+                    errorMessage.setValue(e.getMessage());
+                }
+        );
     }
+
 }

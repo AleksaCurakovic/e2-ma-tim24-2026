@@ -51,7 +51,11 @@ public class LoginFragment extends Fragment {
                 Navigation.findNavController(view).navigate(R.id.action_login_to_register));
 
 
-        tvGuest.setOnClickListener(v -> navigateToHome(false));
+        tvGuest.setOnClickListener(v -> viewModel.loginAsGuest());
+
+        viewModel.guestLoginSuccess.observe(getViewLifecycleOwner(), success -> {
+            if (Boolean.TRUE.equals(success)) navigateToHome(false);
+        });
 
         viewModel.isLoading.observe(getViewLifecycleOwner(), loading ->
                 progressBar.setVisibility(loading ? View.VISIBLE : View.GONE));
