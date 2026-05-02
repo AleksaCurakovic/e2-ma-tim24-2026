@@ -1,24 +1,19 @@
 package com.example.myapplication.presentation.viewModel;
 
-import android.util.Log;
-
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.myapplication.data.repository.AuthRepository;
+import com.example.myapplication.service.AuthService;
 
 public class AuthViewModel extends ViewModel {
 
-    private final AuthRepository repository = new AuthRepository();
-
-    // LiveData that the fragments observe
+    private final AuthService authService = new AuthService(new AuthRepository());
     public final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     public final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     public final MutableLiveData<Boolean> registerSuccess = new MutableLiveData<>();
     public final MutableLiveData<Boolean> loginSuccess = new MutableLiveData<>();
-
     public final MutableLiveData<Boolean> guestLoginSuccess = new MutableLiveData<>();
-
 
     public void register(String email, String username, String region, String password, String repeatPassword) {
         if (!password.equals(repeatPassword)) {
@@ -32,7 +27,7 @@ public class AuthViewModel extends ViewModel {
         }
 
         isLoading.setValue(true);
-        repository.register(email, username, region, password,
+        authService.register(email, username, region, password,
                 unused -> {
                     isLoading.setValue(false);
                     registerSuccess.setValue(true);
@@ -49,7 +44,7 @@ public class AuthViewModel extends ViewModel {
             return;
         }
         isLoading.setValue(true);
-        repository.login(emailOrUsername, password,
+        authService.login(emailOrUsername, password,
                 unused -> {
                     isLoading.setValue(false);
                     loginSuccess.setValue(true);
@@ -62,7 +57,7 @@ public class AuthViewModel extends ViewModel {
 
     public void loginAsGuest() {
         isLoading.setValue(true);
-        repository.loginAsGuest(
+        authService.loginAsGuest(
                 guestName -> {
                     isLoading.setValue(false);
                     guestLoginSuccess.setValue(true);
@@ -73,5 +68,4 @@ public class AuthViewModel extends ViewModel {
                 }
         );
     }
-
 }

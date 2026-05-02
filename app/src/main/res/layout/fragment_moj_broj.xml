@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvPhaseInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Find the number!"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="60"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvScore"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="You: 0  Opp: 0"
+        android:textColor="#AAAAAA"
+        android:textSize="14sp"
+        android:layout_marginTop="4dp" />
+
+    <!-- Target number -->
+    <TextView
+        android:id="@+id/tvTarget"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="—"
+        android:textColor="#FFD700"
+        android:textSize="64sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginTop="16dp" />
+
+    <!-- Available numbers -->
+    <LinearLayout
+        android:id="@+id/numbersRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp" />
+
+    <!-- Operator buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <Button android:id="@+id/btnOpPlus"  android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="+" android:layout_margin="2dp" />
+        <Button android:id="@+id/btnOpMinus" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="-" android:layout_margin="2dp" />
+        <Button android:id="@+id/btnOpMul"   android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="×" android:layout_margin="2dp" />
+        <Button android:id="@+id/btnOpDiv"   android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="÷" android:layout_margin="2dp" />
+        <Button android:id="@+id/btnOpLPar"  android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="(" android:layout_margin="2dp" />
+        <Button android:id="@+id/btnOpRPar"  android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:text=")" android:layout_margin="2dp" />
+
+    </LinearLayout>
+
+    <!-- Expression field -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <EditText
+            android:id="@+id/etExpression"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="e.g. (25 + 3) * 4"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#777777"
+            android:backgroundTint="#FFFFFF"
+            android:inputType="text"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btnSubmit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Submit" />
+
+    </LinearLayout>
+
+    <!-- Results -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:id="@+id/tvMyResult"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="You: —"
+            android:textColor="#4CAF50"
+            android:textSize="18sp"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/tvOppResult"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Opp: —"
+            android:textColor="#EF5350"
+            android:textSize="18sp"
+            android:gravity="center" />
+
+    </LinearLayout>
+
+</LinearLayout>

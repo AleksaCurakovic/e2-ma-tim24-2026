@@ -21,6 +21,8 @@ public class RegisterFragment extends Fragment {
 
     private AuthViewModel viewModel;
 
+    private String selectedRegion = "";
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_register, container, false);
@@ -42,9 +44,11 @@ public class RegisterFragment extends Fragment {
         TextView tvLogin = view.findViewById(R.id.tvLogin);
         ProgressBar progressBar = view.findViewById(R.id.progressBar);
 
+
         btnSelectRegion.setOnClickListener(v -> {
             SerbiaMapDialog mapDialog = new SerbiaMapDialog();
             mapDialog.setOnRegionConfirmedListener(region -> {
+                selectedRegion = region;
                 tvSelectedRegion.setText("Selected: " + region);
             });
             mapDialog.show(getParentFragmentManager(), "SerbiaMapDialog");

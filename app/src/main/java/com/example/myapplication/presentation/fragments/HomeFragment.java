@@ -1,5 +1,4 @@
-package com.example.myapplication.presentation.fragments;// HomeFragment.java
-
+package com.example.myapplication.presentation.fragments;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -12,12 +11,23 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.Navigation;
 
 import com.example.myapplication.R;
+import com.example.myapplication.data.model.User;
+import com.example.myapplication.presentation.viewModel.GameViewModel;
 import com.example.myapplication.presentation.viewModel.HomeViewModel;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class HomeFragment extends Fragment {
+
+    private GameViewModel gameViewModel;
+    private HomeViewModel homeViewModel;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -29,16 +39,55 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        HomeViewModel homeViewModel = new ViewModelProvider(requireActivity())
-                .get(HomeViewModel.class);
+        homeViewModel = new ViewModelProvider(requireActivity()).get(HomeViewModel.class);
+        gameViewModel = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
 
         TextView tvWelcome = view.findViewById(R.id.tvWelcome);
         MaterialButton btnPlay = view.findViewById(R.id.btnPlay);
 
+        // Show username in welcome text
+        homeViewModel.currentUser.observe(getViewLifecycleOwner(), user -> {
+            if (user != null) {
+                tvWelcome.setText("Welcome, " + user.getUsername() + "!");
+            }
+        });
 
+        // Play button click
         btnPlay.setOnClickListener(v -> {
-            // TODO: handle play logic
-            Toast.makeText(requireContext(), "Starting game...", Toast.LENGTH_SHORT).show();
+            User user = homeViewModel.currentUser.getValue();
+            if (user == null) {
+                Toast.makeText(requireContext(),
+                        "Loading user data, please wait",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            gameViewModel.startMatchmaking(
+                    user.getUsername()
+            );
+        });
+
+        // Show loading state on button
+        gameViewModel.isLoading.observe(getViewLifecycleOwner(), loading -> {
+            btnPlay.setEnabled(!loading);
+            btnPlay.setText(loading ? "Finding opponent..." : "▶  PLAY");
+        });
+
+        // Navigate when game is found
+        gameViewModel.navigateToGame.observe(getViewLifecycleOwner(), gameId -> {
+            Bundle b = new Bundle();
+            b.putString("gameId", gameId);
+
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.action_homeFragment_to_gameFragment, b);
+        });
+
+        // Show errors
+        gameViewModel.errorMessage.observe(getViewLifecycleOwner(), msg -> {
+            if (msg != null) {
+                Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show();
+                gameViewModel.errorMessage.setValue(null);
+            }
         });
     }
+
 }

@@ -1,3 +1,4 @@
+
 // HomeFragment.java
 package com.example.myapplication.presentation.fragments;
 
@@ -10,11 +11,11 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.example.myapplication.R;
 
-public class RanksFragment extends Fragment {
+public class ResultsFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_ranks, container, false);
+        return inflater.inflate(R.layout.fragment_results, container, false);
     }
 }

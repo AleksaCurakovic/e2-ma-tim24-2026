@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <!-- Left half filled -->
+    <path android:fillColor="#212121"
+        android:pathData="M10,2 A8,8 0 0,0 10,18 Z"/>
+    <!-- Right half outline -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#212121"
+        android:strokeWidth="1.5"
+        android:pathData="M10,2 A8,8 0 0,1 10,18"/>
+    <!-- Full outline -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#212121"
+        android:strokeWidth="1.5"
+        android:pathData="M10,2 a8,8 0 1,0 0.001,0 Z"/>
+</vector>

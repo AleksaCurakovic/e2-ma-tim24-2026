@@ -169,6 +169,24 @@ public class AuthRepository {
                 .addOnFailureListener(onFailure);
     }
 
+    public void loadUser(OnSuccessListener<User> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null) {
+            onFailure.onFailure(new Exception("No user logged in"));
+            return;
+        }
+
+        db.collection("users").document(firebaseUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists()) {
+                        onSuccess.onSuccess(snapshot.toObject(User.class));
+                    } else {
+                        onFailure.onFailure(new Exception("User data not found"));
+                    }
+                })
+                .addOnFailureListener(onFailure);
+    }
 
     public void logout() {
         auth.signOut();

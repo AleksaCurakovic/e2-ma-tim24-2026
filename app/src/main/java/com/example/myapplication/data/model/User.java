@@ -14,7 +14,7 @@ public class User {
     private int avatarId;
     private String qrCode;
 
-    private long lastLogin;
+    private long lastLoginTime;
 
     public User() {}
 
@@ -23,8 +23,10 @@ public class User {
         this.username = username;
         this.email = email;
         this.region = region;
-        this.tokens = 5;
-        this.lastLogin = 0;
+        this.tokens = 0;
+        this.lastLoginTime = 0;
+        this.leagueName = "Commoner";
+        this.leagueIcon = "league0";
     }
 
     public String getUid() {
@@ -85,9 +87,9 @@ public class User {
 
     public String getLeagueIcon() { return leagueIcon;}
 
-    public long getLastLogin() { return lastLogin; }
+    public long getLastLoginTime() { return lastLoginTime; }
 
-    public void setLastLogin(long lastLogin) { this.lastLogin = lastLogin; }
+    public void setLastLoginTime(long lastLogin) { this.lastLoginTime = lastLogin; }
 
     public void setLeagueIcon(String leagueIcon) {
         this.leagueIcon = leagueIcon;
