@@ -129,7 +129,7 @@ public class GameRepository {
 
     public void fetchMinigameIds(OnSuccessListener<List<String>> onSuccess,
                                  OnFailureListener onFailure) {
-        String[] categories = { "skocko" };
+        String[] categories = { "skocko", "korak" };
 
         List<String> result = new ArrayList<>();
         AtomicInteger counter = new AtomicInteger(0);
@@ -193,6 +193,33 @@ public class GameRepository {
                         }
                     } else {
                         onFailure.onFailure(new Exception("Solution not found"));
+                    }
+                })
+                .addOnFailureListener(onFailure);
+    }
+
+    public void fetchKorakSolution(String docId, String playerPrefix,
+                                   OnSuccessListener<Map<String, Object>> onSuccess,
+                                   OnFailureListener onFailure) {
+        db.collection("minigames")
+                .document("korak")
+                .collection("items")
+                .document(docId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists()) {
+                        String answer = snapshot.getString(playerPrefix + "Answer");
+                        List<String> steps = (List<String>) snapshot.get(playerPrefix + "Steps");
+                        if (answer != null && steps != null && steps.size() == 7) {
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("answer", answer);
+                            data.put("steps", steps);
+                            onSuccess.onSuccess(data);
+                        } else {
+                            onFailure.onFailure(new Exception("Invalid korak data for: " + playerPrefix));
+                        }
+                    } else {
+                        onFailure.onFailure(new Exception("Korak document not found"));
                     }
                 })
                 .addOnFailureListener(onFailure);

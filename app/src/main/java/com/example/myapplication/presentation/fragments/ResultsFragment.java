@@ -34,7 +34,10 @@ public class ResultsFragment extends Fragment {
         GameRoom room = vm.gameRoom.getValue();
         if (room != null) {
             displayResults(room, view);
-            deleteRoomOnce();
+            String myUsername = getArguments() != null ? getArguments().getString("myUsername") : null;
+            if (myUsername != null && myUsername.equals(room.getPlayerOne())) {
+                deleteRoomOnce();
+            }
         }
     }
 

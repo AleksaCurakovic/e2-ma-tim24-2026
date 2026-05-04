@@ -27,10 +27,16 @@
             android:id="@+id/tvTimer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="30s"
-            android:textSize="18sp"
+            android:text=""
+            android:textSize="15sp"
             android:textStyle="bold"
-            android:textColor="@android:color/holo_red_dark"
+            android:textColor="?attr/colorPrimary"
+            android:background="@drawable/bg_timer_pill"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:visibility="invisible"
             android:layout_marginBottom="24dp"/>
 
         <GridLayout

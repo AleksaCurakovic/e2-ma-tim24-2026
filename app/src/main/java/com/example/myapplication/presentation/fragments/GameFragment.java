@@ -5,7 +5,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -14,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
 import com.example.myapplication.R;
+import com.example.myapplication.data.model.GameRoom;
 import com.example.myapplication.presentation.viewModel.GameViewModel;
 
 import java.util.HashMap;
@@ -24,6 +24,7 @@ public class GameFragment extends Fragment {
     private static final Map<String, Class<? extends Fragment>> MINIGAME_REGISTRY = new HashMap<>();
     static {
         MINIGAME_REGISTRY.put("skocko", SkockoFragment.class);
+        MINIGAME_REGISTRY.put("korak", KorakFragment.class);
     }
 
     private GameViewModel vm;
@@ -35,10 +36,6 @@ public class GameFragment extends Fragment {
     private Runnable resultsRunnable;
 
     private FrameLayout layoutGame;
-    private LinearLayout layoutResults;
-    private TextView tvRoundScoreOne;
-    private TextView tvRoundScoreTwo;
-    private TextView tvCountdown;
 
     public GameFragment() {
         super(R.layout.fragment_game);
@@ -59,10 +56,6 @@ public class GameFragment extends Fragment {
 
     private void initializeViews(View view) {
         layoutGame = view.findViewById(R.id.layoutGame);
-        layoutResults = view.findViewById(R.id.layoutResults);
-        tvRoundScoreOne = view.findViewById(R.id.tvRoundScoreOne);
-        tvRoundScoreTwo = view.findViewById(R.id.tvRoundScoreTwo);
-        tvCountdown = view.findViewById(R.id.tvCountdown);
     }
 
     private void observeGameRoom(View view) {
@@ -94,9 +87,8 @@ public class GameFragment extends Fragment {
 
             String phase = room.getRoundPhase();
             if ("SHOWING_RESULTS".equals(phase)) {
-                showResults(room);
+                scheduleAdvance();
             } else {
-                layoutResults.setVisibility(View.GONE);
                 layoutGame.setVisibility(View.VISIBLE);
 
                 String minigameType = room.getCurrentMinigameType();
@@ -130,28 +122,20 @@ public class GameFragment extends Fragment {
         }
     }
 
-    private void showResults(com.example.myapplication.data.model.GameRoom room) {
-        layoutGame.setVisibility(View.GONE);
-        layoutResults.setVisibility(View.VISIBLE);
-
-        tvRoundScoreOne.setText("+" + room.getPlayerOneRoundScore());
-        tvRoundScoreTwo.setText("+" + room.getPlayerTwoRoundScore());
-        tvCountdown.setText("Next round in 3s...");
-
+    private void scheduleAdvance() {
         if (resultsRunnable != null) {
             handler.removeCallbacks(resultsRunnable);
         }
-
         resultsRunnable = () -> {
-            com.example.myapplication.data.model.GameRoom current = vm.gameRoom.getValue();
+            GameRoom current = vm.gameRoom.getValue();
             if (current != null && myUsername.equals(current.getPlayerOne())) {
                 advanceToNextRound(current);
             }
         };
-        handler.postDelayed(resultsRunnable, 3000);
+        handler.postDelayed(resultsRunnable, 2000);
     }
 
-    private void advanceToNextRound(com.example.myapplication.data.model.GameRoom room) {
+    private void advanceToNextRound(GameRoom room) {
         int roundNum = room.getRoundNumber();
         int nextIndex = room.getCurrentMinigameIndex();
 
@@ -185,6 +169,7 @@ public class GameFragment extends Fragment {
     private void navigateToResults() {
         Bundle args = new Bundle();
         args.putString("gameId", gameId);
+        args.putString("myUsername", myUsername);
         Navigation.findNavController(requireView())
                 .navigate(R.id.action_gameFragment_to_resultsFragment, args);
     }

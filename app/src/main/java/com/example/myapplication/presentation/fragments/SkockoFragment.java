@@ -110,13 +110,8 @@ public class SkockoFragment extends Fragment {
         maxGuesses  = isBonusMode ? 1 : 6;
         isMyTurn    = isActivePlayer(phase, room);
 
-        if (phase.equals("SHOWING_RESULTS")) {
-            showWaiting("Round over!");
-            cancelTimer();
-            return;
-        }
-
         if (!isMyTurn) {
+            if (phase.equals("SHOWING_RESULTS")) lastStartedPhase = null;
             showWaiting("Čekaj...");
             cancelTimer();
             return;
@@ -141,6 +136,7 @@ public class SkockoFragment extends Fragment {
     private void showWaiting(String message) {
         tvStatus.setText(message);
         tvTimer.setText("");
+        tvTimer.setVisibility(View.INVISIBLE);
         layoutSymbolPicker.setVisibility(View.GONE);
         btnConfirmGuess.setVisibility(View.GONE);
     }
@@ -205,6 +201,7 @@ public class SkockoFragment extends Fragment {
         }
 
         tvStatus.setText(isBonusMode ? "Bonus potez!" : "Tvoj red!");
+        tvTimer.setVisibility(View.VISIBLE);
         layoutSymbolPicker.setVisibility(View.VISIBLE);
         btnConfirmGuess.setVisibility(View.VISIBLE);
         btnConfirmGuess.setEnabled(false);

@@ -94,6 +94,12 @@ public class GameViewModel extends ViewModel {
         return gameService.calculateFeedback(guess, solution);
     }
 
+    public void fetchKorakSolution(String docId, String playerPrefix,
+                                   com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
+                                   com.google.android.gms.tasks.OnFailureListener onFailure) {
+        gameService.fetchKorakSolution(docId, playerPrefix, onSuccess, onFailure);
+    }
+
     @Override
     public void onCleared() {
         super.onCleared();

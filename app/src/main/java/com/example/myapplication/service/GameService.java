@@ -74,6 +74,16 @@ public class GameService {
         repository.fetchSkockoSolution(docId, solutionField, onSuccess, onFailure);
     }
 
+    // =========================================================================
+    // KORAK PO KORAK
+    // =========================================================================
+
+    public void fetchKorakSolution(String docId, String playerPrefix,
+                                   OnSuccessListener<Map<String, Object>> onSuccess,
+                                   OnFailureListener onFailure) {
+        repository.fetchKorakSolution(docId, playerPrefix, onSuccess, onFailure);
+    }
+
     public void updateGameRoom(String gameId, Map<String, Object> updates,
                                OnSuccessListener<Void> onSuccess,
                                OnFailureListener onFailure) {
