@@ -30,19 +30,7 @@
         android:name="com.example.myapplication.presentation.fragments.GameFragment">
         <action
             android:id="@+id/action_gameFragment_to_resultsFragment"
-            app:destination="@id/resultsFragment" />  <!-- for later -->
-        <action
-        android:id="@+id/action_gameFragment_to_skockoFragment"
-        app:destination="@id/skockoFragment" />  <!-- for later -->
-    </fragment>
-
-    <fragment
-        android:id="@+id/skockoFragment"
-        android:name="com.example.myapplication.presentation.fragments.SkockoFragment"
-        android:label="Skocko">
-        <action
-        android:id="@+id/action_skockoFragment_to_gameFragment"
-        app:destination="@id/gameFragment" />  <!-- for later -->
+            app:destination="@id/resultsFragment" />
     </fragment>
 
     <fragment

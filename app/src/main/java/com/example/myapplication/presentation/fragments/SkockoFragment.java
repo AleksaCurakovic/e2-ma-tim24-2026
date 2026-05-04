@@ -1,434 +1,470 @@
 package com.example.myapplication.presentation.fragments;
 
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.LayoutInflater;
+import android.os.CountDownTimer;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.navigation.Navigation;
 
 import com.example.myapplication.R;
 import com.example.myapplication.data.model.GameRoom;
 import com.example.myapplication.presentation.viewModel.GameViewModel;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SkockoFragment extends Fragment {
 
-    // The 6 possible symbols (must match Firestore values)
-    private static final List<String> SYMBOLS = Arrays.asList(
-            "skocko", "kvadrat", "krug", "srce", "trougao", "zvezda"
-    );
-    private static final int MAX_ATTEMPTS = 6;
-    private static final int COMBO_SIZE   = 4;
+    private static final String[] SYMBOLS = {"skocko", "kvadrat", "krug", "srce", "trougao", "zvezda"};
+    private static final int[] SYMBOL_DRAWABLES = {
+            R.drawable.skocko,
+            R.drawable.square,
+            R.drawable.circle,
+            R.drawable.heart,
+            R.drawable.triangle,
+            R.drawable.star
+    };
+
+    private static final int CELL_SIZE_DP   = 64;
+    private static final int CELL_MARGIN_DP = 5;
+    private static final int BTN_SIZE_DP    = 56;
 
     private GameViewModel vm;
     private String gameId;
-    private String myId;
-    private boolean isBonusMode;
-    private int turnDurationMs;
+    private String myUsername;
 
-    // Solution this player is trying to guess
-    private List<String> solution;
-
-    // Current attempt being built
-    private final List<String> currentAttempt = new ArrayList<>();
-
-    // All attempts made this turn (saved to Firestore when turn ends)
-    private final List<List<String>> allAttempts = new ArrayList<>();
-
-    private boolean turnFinished = false;
-
-    // Timer
-    private final Handler timerHandler = new Handler(Looper.getMainLooper());
-    private Runnable timeUpRunnable;
-    private Runnable progressUpdater;
-    private long timerStartMs;
-    private ProgressBar progressBar;
-
-    // Views
-    private LinearLayout layoutAttempts;   // rows of past attempts
-    private LinearLayout layoutCurrentRow; // the row being built now
+    private TextView tvStatus;
+    private TextView tvTimer;
+    private GridLayout gridGuesses;
     private LinearLayout layoutSymbolPicker;
-    private TextView tvTitle;
-    private TextView tvInstruction;
+    private MaterialButton btnConfirmGuess;
+
+    private List<String> solution;
+    private final List<String> currentGuess = new ArrayList<>();
+    private final List<Map<String, Object>> localGuessHistory = new ArrayList<>();
+    private int currentRow = 0;
+    private boolean isMyTurn = false;
+    private boolean isBonusMode = false;
+    private int maxGuesses = 6;
+    private boolean turnFinished = false;
+    private String activePhase = null;
+    private String lastStartedPhase = null;
+
+    private CountDownTimer turnTimer;
 
     public SkockoFragment() {
         super(R.layout.fragment_skocko);
     }
 
+    // =========================================================================
+    // LIFECYCLE
+    // =========================================================================
+
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        vm    = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
-        myId  = vm.myUsername.getValue();
-        gameId = getArguments().getString("gameId");
-        isBonusMode   = getArguments().getBoolean("isBonusMode", false);
-        turnDurationMs = getArguments().getInt("turnDurationMs", 30000);
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+        vm = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
+        gameId     = getArguments().getString("gameId");
+        myUsername = getArguments().getString("myUsername");
 
-        progressBar        = view.findViewById(R.id.skockoProgressBar);
-        layoutAttempts     = view.findViewById(R.id.layoutAttempts);
-        layoutCurrentRow   = view.findViewById(R.id.layoutCurrentRow);
+        tvStatus          = view.findViewById(R.id.tvStatus);
+        tvTimer           = view.findViewById(R.id.tvTimer);
+        gridGuesses       = view.findViewById(R.id.gridGuesses);
         layoutSymbolPicker = view.findViewById(R.id.layoutSymbolPicker);
-        tvTitle            = view.findViewById(R.id.tvSkockoTitle);
-        tvInstruction      = view.findViewById(R.id.tvSkockoInstruction);
+        btnConfirmGuess   = view.findViewById(R.id.btnConfirmGuess);
 
-        setupSymbolPicker(view);
+        setupSymbolPicker();
+        btnConfirmGuess.setOnClickListener(v -> submitGuess());
 
-        view.findViewById(R.id.btnSubmitAttempt).setOnClickListener(v -> submitAttempt());
-        view.findViewById(R.id.btnClearAttempt).setOnClickListener(v -> clearCurrentAttempt());
-
-        if (isBonusMode) {
-            setupBonusMode();
-        } else {
-            setupMainMode();
-        }
-
-        startTimer();
-    }
-
-    // =========================================================================
-    // SETUP
-    // =========================================================================
-
-    private void setupMainMode() {
-        tvTitle.setText("Skočko");
-        tvInstruction.setText("Pogodi kombinaciju za 30 sekundi!");
-
-        // Wait for solution to load from ViewModel
-        vm.mySkockoSolution.observe(getViewLifecycleOwner(), sol -> {
-            if (sol != null && !sol.isEmpty()) {
-                solution = sol;
-            }
+        vm.currentPhase.observe(getViewLifecycleOwner(), phase -> {
+            if (phase != null) onPhaseChanged(phase);
         });
-    }
-
-    private void setupBonusMode() {
-        tvTitle.setText("Bonus pokušaj!");
-        tvInstruction.setText("Imaš 10 sekundi za jedan pokušaj!");
-
-        // In bonus mode, we guess the OPPONENT's combination
-        // Show the opponent's past attempts so we can deduce the solution
-        vm.opponentSkockoSolution.observe(getViewLifecycleOwner(), sol -> {
-            if (sol != null && !sol.isEmpty()) {
-                solution = sol;
-            }
-        });
-
-        // Show opponent's attempts above the current row
-        vm.gameRoom.observe(getViewLifecycleOwner(), room -> {
-            if (room == null) return;
-            List<List<String>> opponentAttempts = isMyBonusTurnForP1(room)
-                    ? room.getP2Attempts()
-                    : room.getP1Attempts();
-
-            if (opponentAttempts != null) {
-                renderPastAttempts(opponentAttempts, solution);
-            }
-        });
-
-        // Bonus = only 1 attempt allowed
-        tvInstruction.setText("Pogledaj pokušaje protivnika i pogodi kombinaciju!");
-    }
-
-    /**
-     * Returns true if I am P1 doing bonus (meaning P2 failed and P1 gets to guess P2's combo).
-     * Returns false if I am P2 doing bonus.
-     */
-    private boolean isMyBonusTurnForP1(GameRoom room) {
-        return myId.equals(room.getPlayerOne());
-    }
-
-    // =========================================================================
-    // SYMBOL PICKER
-    // =========================================================================
-
-    private void setupSymbolPicker(View view) {
-        // Each symbol button appends to currentAttempt
-        int[] symbolButtonIds = {
-                R.id.btnSkocko,
-                R.id.btnKvadrat,
-                R.id.btnKrug,
-                R.id.btnSrce,
-                R.id.btnTrougao,
-                R.id.btnZvezda
-        };
-
-        for (int i = 0; i < symbolButtonIds.length; i++) {
-            final String symbol = SYMBOLS.get(i);
-            view.findViewById(symbolButtonIds[i]).setOnClickListener(v -> {
-                if (currentAttempt.size() < COMBO_SIZE && !turnFinished) {
-                    currentAttempt.add(symbol);
-                    updateCurrentRow();
-                }
-            });
-        }
-    }
-
-    private void clearCurrentAttempt() {
-        currentAttempt.clear();
-        updateCurrentRow();
-    }
-
-    private void updateCurrentRow() {
-        layoutCurrentRow.removeAllViews();
-        for (int i = 0; i < COMBO_SIZE; i++) {
-            ImageView cell = makeSymbolCell(
-                    i < currentAttempt.size() ? currentAttempt.get(i) : null,
-                    false, false
-            );
-            layoutCurrentRow.addView(cell);
-        }
-    }
-
-    // =========================================================================
-    // ATTEMPT SUBMISSION
-    // =========================================================================
-
-    private void submitAttempt() {
-        if (turnFinished) return;
-        if (solution == null) {
-            Toast.makeText(requireContext(), "Učitavanje...", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (currentAttempt.size() < COMBO_SIZE) {
-            Toast.makeText(requireContext(), "Izaberi 4 simbola!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (isBonusMode && allAttempts.size() >= 1) {
-            // Bonus = only 1 attempt
-            return;
-        }
-        if (!isBonusMode && allAttempts.size() >= MAX_ATTEMPTS) {
-            return;
-        }
-
-        List<String> attempt = new ArrayList<>(currentAttempt);
-        allAttempts.add(attempt);
-
-        boolean solved = attempt.equals(solution);
-        renderAttemptRow(attempt, solution);
-        clearCurrentAttempt();
-
-        if (solved) {
-            endTurn(true);
-            return;
-        }
-
-        // Bonus mode = only 1 attempt, failed
-        if (isBonusMode) {
-            endTurn(false);
-            return;
-        }
-
-        // Main mode — check if out of attempts
-        if (allAttempts.size() >= MAX_ATTEMPTS) {
-            endTurn(false);
-        }
-    }
-
-    // =========================================================================
-    // SCORING
-    // =========================================================================
-
-    private int calculateScore(int attemptNumber, boolean solved, boolean isBonus) {
-        if (!solved) return 0;
-        if (isBonus) return 10;
-        if (attemptNumber <= 2) return 20;
-        if (attemptNumber <= 4) return 15;
-        return 10; // attempts 5-6
-    }
-
-    // =========================================================================
-    // TURN END
-    // =========================================================================
-
-    private void endTurn(boolean solved) {
-        if (turnFinished) return;
-        turnFinished = true;
-        cancelTimer();
-
-        int score = calculateScore(allAttempts.size(), solved, isBonusMode);
-
-        if (isBonusMode) {
-            vm.finishBonusTurn(gameId, myId, score, solved);
-        } else {
-            vm.finishMainTurn(gameId, myId, score, allAttempts, solved);
-        }
-
-        // Navigate back to GameFragment which will handle the next phase
-        Navigation.findNavController(requireView())
-                .navigate(R.id.action_skockoFragment_to_gameFragment);
-    }
-
-    // =========================================================================
-    // RENDERING
-    // =========================================================================
-
-    /**
-     * Renders a completed attempt row with feedback dots.
-     * Feedback: filled = correct position, half = wrong position, empty = not present.
-     */
-    private void renderAttemptRow(List<String> attempt, List<String> sol) {
-        View row = LayoutInflater.from(requireContext())
-                .inflate(R.layout.item_skocko_attempt_row, layoutAttempts, false);
-
-        int[] cellIds = {
-                R.id.cell1, R.id.cell2, R.id.cell3, R.id.cell4
-        };
-        int[] feedbackIds = {
-                R.id.feedback1, R.id.feedback2, R.id.feedback3, R.id.feedback4
-        };
-
-        List<Integer> feedback = computeFeedback(attempt, sol);
-
-        for (int i = 0; i < COMBO_SIZE; i++) {
-            ImageView cell = row.findViewById(cellIds[i]);
-            cell.setImageResource(symbolDrawable(attempt.get(i)));
-
-            ImageView fb = row.findViewById(feedbackIds[i]);
-            switch (feedback.get(i)) {
-                case 2: fb.setImageResource(R.drawable.ic_feedback_correct);  break; // right pos
-                case 1: fb.setImageResource(R.drawable.ic_feedback_present);  break; // wrong pos
-                case 0: fb.setImageResource(R.drawable.ic_feedback_absent);   break; // not present
-            }
-        }
-
-        layoutAttempts.addView(row);
-    }
-
-    /**
-     * Renders past attempts (for bonus mode — opponent's failed attempts).
-     */
-    private void renderPastAttempts(List<List<String>> attempts, List<String> sol) {
-        layoutAttempts.removeAllViews();
-        if (sol == null) return;
-        for (List<String> attempt : attempts) {
-            renderAttemptRow(attempt, sol);
-        }
-    }
-
-    /**
-     * Computes feedback for each position:
-     *   2 = correct symbol in correct position
-     *   1 = correct symbol in wrong position
-     *   0 = symbol not in solution at all
-     */
-    private List<Integer> computeFeedback(List<String> attempt, List<String> sol) {
-        int[] result = new int[COMBO_SIZE];
-        boolean[] solUsed     = new boolean[COMBO_SIZE];
-        boolean[] attemptUsed = new boolean[COMBO_SIZE];
-
-        // First pass: exact matches
-        for (int i = 0; i < COMBO_SIZE; i++) {
-            if (attempt.get(i).equals(sol.get(i))) {
-                result[i]     = 2;
-                solUsed[i]    = true;
-                attemptUsed[i] = true;
-            }
-        }
-
-        // Second pass: wrong position matches
-        for (int i = 0; i < COMBO_SIZE; i++) {
-            if (attemptUsed[i]) continue;
-            for (int j = 0; j < COMBO_SIZE; j++) {
-                if (!solUsed[j] && attempt.get(i).equals(sol.get(j))) {
-                    result[i]  = 1;
-                    solUsed[j] = true;
-                    break;
-                }
-            }
-        }
-
-        List<Integer> out = new ArrayList<>();
-        for (int r : result) out.add(r);
-        return out;
-    }
-
-    private ImageView makeSymbolCell(String symbol, boolean showFeedback, boolean correct) {
-        ImageView iv = new ImageView(requireContext());
-        int size = (int) (48 * requireContext().getResources().getDisplayMetrics().density);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-        params.setMargins(4, 4, 4, 4);
-        iv.setLayoutParams(params);
-        if (symbol != null) {
-            iv.setImageResource(symbolDrawable(symbol));
-        } else {
-            iv.setImageResource(R.drawable.empty);
-        }
-        return iv;
-    }
-
-    private int symbolDrawable(String symbol) {
-        switch (symbol) {
-            case "skocko":  return R.drawable.skocko;
-            case "kvadrat": return R.drawable.square;
-            case "krug":    return R.drawable.circle;
-            case "srce":    return R.drawable.heart;
-            case "trougao": return R.drawable.triangle;
-            case "zvezda":  return R.drawable.star;
-            default:        return R.drawable.empty;
-        }
-    }
-
-    // =========================================================================
-    // TIMER
-    // =========================================================================
-
-    private void startTimer() {
-        timerStartMs = System.currentTimeMillis();
-
-        if (progressBar != null) {
-            progressBar.setMax(100);
-            progressBar.setProgress(100);
-        }
-
-        progressUpdater = new Runnable() {
-            @Override
-            public void run() {
-                if (progressBar == null || turnFinished) return;
-                long elapsed   = System.currentTimeMillis() - timerStartMs;
-                long remaining = turnDurationMs - elapsed;
-                if (remaining <= 0) {
-                    progressBar.setProgress(0);
-                    return;
-                }
-                progressBar.setProgress((int) ((remaining * 100) / turnDurationMs));
-                timerHandler.postDelayed(this, 100);
-            }
-        };
-        timerHandler.post(progressUpdater);
-
-        timeUpRunnable = () -> {
-            if (!turnFinished) {
-                Toast.makeText(requireContext(), "Vreme isteklo!", Toast.LENGTH_SHORT).show();
-                endTurn(false);
-            }
-        };
-        timerHandler.postDelayed(timeUpRunnable, turnDurationMs);
-    }
-
-    private void cancelTimer() {
-        if (progressUpdater != null) timerHandler.removeCallbacks(progressUpdater);
-        if (timeUpRunnable  != null) timerHandler.removeCallbacks(timeUpRunnable);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         cancelTimer();
+    }
+
+    // =========================================================================
+    // PHASE HANDLING
+    // =========================================================================
+
+    private void onPhaseChanged(String phase) {
+        GameRoom room = vm.gameRoom.getValue();
+        if (room == null) return;
+
+        isBonusMode = phase.contains("BONUS");
+        maxGuesses  = isBonusMode ? 1 : 6;
+        isMyTurn    = isActivePlayer(phase, room);
+
+        if (phase.equals("SHOWING_RESULTS")) {
+            showWaiting("Round over!");
+            cancelTimer();
+            return;
+        }
+
+        if (!isMyTurn) {
+            showWaiting("Čekaj...");
+            cancelTimer();
+            return;
+        }
+
+        if (!phase.equals(lastStartedPhase)) {
+            lastStartedPhase = phase;
+            loadSolutionThenStart(room);
+        }
+    }
+
+    private boolean isActivePlayer(String phase, GameRoom room) {
+        switch (phase) {
+            case "P1_TURN":
+            case "P1_BONUS": return myUsername.equals(room.getPlayerOne());
+            case "P2_TURN":
+            case "P2_BONUS": return myUsername.equals(room.getPlayerTwo());
+            default:         return false;
+        }
+    }
+
+    private void showWaiting(String message) {
+        tvStatus.setText(message);
+        tvTimer.setText("");
+        layoutSymbolPicker.setVisibility(View.GONE);
+        btnConfirmGuess.setVisibility(View.GONE);
+    }
+
+    // =========================================================================
+    // TURN START
+    // =========================================================================
+
+    private void loadSolutionThenStart(GameRoom room) {
+        tvStatus.setText("Učitavanje...");
+        String entry = room.getMinigamePlaylist().get(room.getCurrentMinigameIndex());
+        String docId = entry.contains(":") ? entry.split(":")[1] : entry;
+        String solutionField = solutionFieldForPhase(room.getRoundPhase());
+
+        vm.fetchSkockoSolution(docId, solutionField,
+                sol -> {
+                    solution = sol;
+                    startTurn();
+                },
+                e -> tvStatus.setText("Greška pri učitavanju!")
+        );
+    }
+
+    /**
+     * Main turns: each player guesses their own solution.
+     *   P1_TURN  → p1Solution (P1 guesses their own)
+     *   P2_TURN  → p2Solution (P2 guesses their own)
+     * Bonus turns: the bonus player guesses the OTHER player's solution.
+     *   P2_BONUS → p1Solution (P2 tries to steal by guessing P1's solution)
+     *   P1_BONUS → p2Solution (P1 tries to steal by guessing P2's solution)
+     */
+    private String solutionFieldForPhase(String phase) {
+        switch (phase) {
+            case "P1_TURN":  return "p1Solution";
+            case "P2_TURN":  return "p2Solution";
+            case "P2_BONUS": return "p1Solution";
+            case "P1_BONUS": return "p2Solution";
+            default:         return "p1Solution";
+        }
+    }
+
+    private void startTurn() {
+        GameRoom room = vm.gameRoom.getValue();
+        activePhase   = room != null ? room.getRoundPhase() : null;
+        currentRow    = 0;
+        turnFinished  = false;
+        currentGuess.clear();
+        localGuessHistory.clear();
+
+        if (isBonusMode && room != null) {
+            List<Map<String, Object>> history = activePhase.equals("P2_BONUS")
+                    ? room.getP1GuessHistory()
+                    : room.getP2GuessHistory();
+            int historySize = (history != null) ? history.size() : 0;
+            maxGuesses = historySize + 1;
+        }
+
+        setupGuessGrid();
+
+        if (isBonusMode) {
+            renderOpponentHistory(room);
+        }
+
+        tvStatus.setText(isBonusMode ? "Bonus potez!" : "Tvoj red!");
+        layoutSymbolPicker.setVisibility(View.VISIBLE);
+        btnConfirmGuess.setVisibility(View.VISIBLE);
+        btnConfirmGuess.setEnabled(false);
+
+        long duration = isBonusMode ? 10_000 : 30_000;
+        startTimer(duration);
+    }
+
+    // =========================================================================
+    // GUESS FLOW
+    // =========================================================================
+
+    private void addSymbolToGuess(String symbol) {
+        if (!isMyTurn || turnFinished) return;
+        if (currentGuess.size() < 4) {
+            currentGuess.add(symbol);
+            renderCurrentRow();
+            btnConfirmGuess.setEnabled(currentGuess.size() == 4);
+        }
+    }
+
+    private void submitGuess() {
+        if (currentGuess.size() != 4 || turnFinished) return;
+
+        btnConfirmGuess.setEnabled(false);
+
+        List<String> feedback = vm.calculateFeedback(currentGuess, solution);
+        renderFeedback(currentRow, feedback);
+
+        Map<String, Object> entry = new HashMap<>();
+        entry.put("guess", new ArrayList<>(currentGuess));
+        entry.put("feedback", new ArrayList<>(feedback));
+        localGuessHistory.add(entry);
+
+        boolean solved = isAllCorrect(feedback);
+        currentRow++;
+        currentGuess.clear();
+
+        if (solved || currentRow >= maxGuesses) {
+            turnFinished = true;
+            cancelTimer();
+            commitTurnToFirestore(solved);
+        } else {
+            renderCurrentRow();
+            btnConfirmGuess.setEnabled(false);
+        }
+    }
+
+    private boolean isAllCorrect(List<String> feedback) {
+        for (String f : feedback) if (!f.equals("CORRECT")) return false;
+        return true;
+    }
+
+    // =========================================================================
+    // FIRESTORE WRITE (only active player)
+    // =========================================================================
+
+    private void commitTurnToFirestore(boolean solved) {
+        GameRoom room = vm.gameRoom.getValue();
+        if (room == null || activePhase == null) return;
+
+        String phase = activePhase;
+        int score = scoreForGuess(currentRow, solved);
+        String nextPhase = nextPhaseAfter(phase, solved);
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("roundPhase", nextPhase);
+
+        if (!isBonusMode) {
+            if (phase.equals("P1_TURN")) {
+                updates.put("playerOneRoundScore", score);
+                updates.put("playerOneScore", room.getPlayerOneScore() + score);
+                updates.put("p1GuessHistory", new ArrayList<>(localGuessHistory));
+            } else {
+                updates.put("playerTwoRoundScore", score);
+                updates.put("playerTwoScore", room.getPlayerTwoScore() + score);
+                updates.put("p2GuessHistory", new ArrayList<>(localGuessHistory));
+            }
+        } else {
+            if (solved) {
+                if (phase.equals("P1_BONUS")) {
+                    updates.put("playerOneRoundScore", room.getPlayerOneRoundScore() + score);
+                    updates.put("playerOneScore", room.getPlayerOneScore() + score);
+                } else {
+                    updates.put("playerTwoRoundScore", room.getPlayerTwoRoundScore() + score);
+                    updates.put("playerTwoScore", room.getPlayerTwoScore() + score);
+                }
+            }
+        }
+
+        vm.advancePhase(gameId, updates);
+    }
+
+    private int scoreForGuess(int guessesUsed, boolean solved) {
+        if (!solved) return 0;
+        if (isBonusMode) return 10;
+        if (guessesUsed <= 2) return 20;
+        if (guessesUsed <= 4) return 15;
+        return 10;
+    }
+
+    private String nextPhaseAfter(String phase, boolean solved) {
+        switch (phase) {
+            case "P1_TURN":  return solved ? "P2_TURN" : "P2_BONUS";
+            case "P2_BONUS": return "P2_TURN";
+            case "P2_TURN":  return solved ? "SHOWING_RESULTS" : "P1_BONUS";
+            case "P1_BONUS": return "SHOWING_RESULTS";
+            default:         return "SHOWING_RESULTS";
+        }
+    }
+
+    private void clearTurnState() {
+        activePhase  = null;
+        turnFinished = false;
+        currentRow   = 0;
+        currentGuess.clear();
+        localGuessHistory.clear();
+    }
+
+    /**
+     * Renders the opponent's failed attempts into the grid before the bonus player starts.
+     * P2_BONUS sees P1's history (p1GuessHistory), P1_BONUS sees P2's history (p2GuessHistory).
+     */
+    @SuppressWarnings("unchecked")
+    private void renderOpponentHistory(GameRoom room) {
+        if (room == null) return;
+
+        List<Map<String, Object>> history = activePhase.equals("P2_BONUS")
+                ? room.getP1GuessHistory()
+                : room.getP2GuessHistory();
+
+        if (history == null || history.isEmpty()) return;
+
+        for (int row = 0; row < history.size() && row < maxGuesses; row++) {
+            Map<String, Object> entry = history.get(row);
+            List<String> guess    = (List<String>) entry.get("guess");
+            List<String> feedback = (List<String>) entry.get("feedback");
+
+            if (guess == null || feedback == null) continue;
+
+            for (int col = 0; col < 4; col++) {
+                ImageView cell = (ImageView) gridGuesses.getChildAt(row * 4 + col);
+                int idx = Arrays.asList(SYMBOLS).indexOf(guess.get(col));
+                if (idx >= 0) cell.setImageResource(SYMBOL_DRAWABLES[idx]);
+            }
+            renderFeedback(row, feedback);
+        }
+
+        currentRow = history.size();
+    }
+
+    // =========================================================================
+    // TIMER
+    // =========================================================================
+
+    private void startTimer(long durationMs) {
+        cancelTimer();
+        turnTimer = new CountDownTimer(durationMs, 500) {
+            @Override
+            public void onTick(long ms) {
+                tvTimer.setText((ms / 1000) + "s");
+            }
+
+            @Override
+            public void onFinish() {
+                tvTimer.setText("0s");
+                if (!turnFinished) {
+                    turnFinished = true;
+                    commitTurnToFirestore(false);
+                }
+            }
+        }.start();
+    }
+
+    private void cancelTimer() {
+        if (turnTimer != null) {
+            turnTimer.cancel();
+            turnTimer = null;
+        }
+    }
+
+    // =========================================================================
+    // UI HELPERS
+    // =========================================================================
+
+    private void setupGuessGrid() {
+        gridGuesses.removeAllViews();
+        gridGuesses.setColumnCount(4);
+        gridGuesses.setRowCount(maxGuesses);
+
+        int sizePx   = dp(CELL_SIZE_DP);
+        int marginPx = dp(CELL_MARGIN_DP);
+
+        for (int row = 0; row < maxGuesses; row++) {
+            for (int col = 0; col < 4; col++) {
+                ImageView cell = new ImageView(requireContext());
+                GridLayout.LayoutParams p = new GridLayout.LayoutParams();
+                p.width  = sizePx;
+                p.height = sizePx;
+                p.setMargins(marginPx, marginPx, marginPx, marginPx);
+                cell.setLayoutParams(p);
+                cell.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.skocko_cell_empty));
+                cell.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                cell.setPadding(dp(6), dp(6), dp(6), dp(6));
+                gridGuesses.addView(cell);
+            }
+        }
+    }
+
+    private void setupSymbolPicker() {
+        layoutSymbolPicker.removeAllViews();
+        int sizePx   = dp(BTN_SIZE_DP);
+        int marginPx = dp(6);
+
+        for (int i = 0; i < SYMBOLS.length; i++) {
+            ImageButton btn = new ImageButton(requireContext());
+            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(sizePx, sizePx);
+            p.setMargins(marginPx, 0, marginPx, 0);
+            btn.setLayoutParams(p);
+            btn.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.skocko_cell_filled));
+            btn.setImageResource(SYMBOL_DRAWABLES[i]);
+            btn.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            btn.setPadding(dp(10), dp(10), dp(10), dp(10));
+            btn.setElevation(dp(2));
+
+            final String symbol = SYMBOLS[i];
+            btn.setOnClickListener(v -> addSymbolToGuess(symbol));
+            layoutSymbolPicker.addView(btn);
+        }
+    }
+
+    private void renderCurrentRow() {
+        for (int col = 0; col < 4; col++) {
+            ImageView cell = (ImageView) gridGuesses.getChildAt(currentRow * 4 + col);
+            if (col < currentGuess.size()) {
+                int idx = Arrays.asList(SYMBOLS).indexOf(currentGuess.get(col));
+                cell.setImageResource(SYMBOL_DRAWABLES[idx]);
+                cell.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.skocko_cell_filled));
+            } else {
+                cell.setImageDrawable(null);
+                cell.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.skocko_cell_empty));
+            }
+        }
+    }
+
+    private void renderFeedback(int row, List<String> feedback) {
+        for (int col = 0; col < 4; col++) {
+            ImageView cell = (ImageView) gridGuesses.getChildAt(row * 4 + col);
+            int colorRes;
+            switch (feedback.get(col)) {
+                case "CORRECT": colorRes = R.color.skocko_correct; break;
+                case "PRESENT": colorRes = R.color.skocko_present; break;
+                default:        colorRes = R.color.skocko_absent;  break;
+            }
+            cell.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes));
+        }
+    }
+
+    private int dp(int dp) {
+        float density = requireContext().getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
     }
 }

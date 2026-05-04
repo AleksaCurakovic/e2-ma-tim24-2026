@@ -2,4 +2,10 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="skocko_correct">#4CAF50</color>
+    <color name="skocko_present">#FFC107</color>
+    <color name="skocko_absent">#9E9E9E</color>
+    <color name="skocko_cell_empty">#E0E0E0</color>
+    <color name="skocko_cell_filled">#FFFFFF</color>
 </resources>

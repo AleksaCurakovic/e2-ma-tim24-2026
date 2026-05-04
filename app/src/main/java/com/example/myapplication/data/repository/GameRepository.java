@@ -129,7 +129,7 @@ public class GameRepository {
 
     public void fetchMinigameIds(OnSuccessListener<List<String>> onSuccess,
                                  OnFailureListener onFailure) {
-        String[] categories = { "skocko", "memory", "quiz", "reaction", "math", "speed" };
+        String[] categories = { "skocko" };
 
         List<String> result = new ArrayList<>();
         AtomicInteger counter = new AtomicInteger(0);
@@ -154,25 +154,7 @@ public class GameRepository {
         }
     }
 
-    /**
-     * Fetches Skocko puzzle data for a given docId.
-     * Returns a map with "p1Solution" and "p2Solution" as List<String>.
-     */
-    public void fetchSkockoData(String docId,
-                                OnSuccessListener<DocumentSnapshot> onSuccess,
-                                OnFailureListener onFailure) {
-        db.collection("minigames")
-                .document("skocko")
-                .collection("items")
-                .document(docId)
-                .get()
-                .addOnSuccessListener(onSuccess)
-                .addOnFailureListener(onFailure);
-    }
 
-    // =========================================================================
-    // GAME ROOM CREATION
-    // =========================================================================
 
     public void createGameRoom(String gameId, String playerOne, String playerTwo,
                                List<String> playlist,
@@ -184,10 +166,7 @@ public class GameRepository {
         if (playlist != null && !playlist.isEmpty()) {
             String first = playlist.get(0);
             room.setCurrentMinigameType(first.contains(":") ? first.split(":")[0] : first);
-            // Store skockoDocId if first minigame is skocko
-            if (first.startsWith("skocko:")) {
-                room.setSkockoDocId(first.split(":")[1]);
-            }
+
         }
 
         db.collection(COL_ROOMS).document(gameId)
@@ -196,145 +175,45 @@ public class GameRepository {
                 .addOnFailureListener(onFailure);
     }
 
-    // =========================================================================
-    // TURN / ROUND MANAGEMENT
-    // =========================================================================
-
-    /**
-     * Called when P1 or P2 finishes their main turn.
-     * Saves attempts + solved status, then transitions phase:
-     *   P1_TURN -> P2_BONUS (if P1 failed) or P2_TURN (if P1 solved)
-     *   P2_TURN -> P1_BONUS (if P2 failed) or SHOWING_RESULTS (if P2 solved)
-     */
-    public Task<Void> finishMainTurn(String gameId, String myUserId, int score,
-                                     List<List<String>> attempts, boolean solved) {
-        DocumentReference ref = db.collection(COL_ROOMS).document(gameId);
-
-        return db.runTransaction(transaction -> {
-            GameRoom room = transaction.get(ref).toObject(GameRoom.class);
-            if (room == null) throw new RuntimeException("Room not found");
-
-            String phase = room.getRoundPhase();
-
-            if (phase.equals("P1_TURN")) {
-                if (!myUserId.equals(room.getPlayerOne()))
-                    throw new RuntimeException("Not your turn");
-
-                room.setP1Attempts(attempts);
-                room.setP1Solved(solved);
-                room.setPlayerOneRoundScore(score);
-                room.setPlayerOneScore(room.getPlayerOneScore() + score);
-
-                // If P1 failed, P2 gets a bonus attempt; otherwise skip to P2's turn
-                room.setRoundPhase(solved ? "P2_TURN" : "P2_BONUS");
-
-            } else if (phase.equals("P2_TURN")) {
-                if (!myUserId.equals(room.getPlayerTwo()))
-                    throw new RuntimeException("Not your turn");
-
-                room.setP2Attempts(attempts);
-                room.setP2Solved(solved);
-                room.setPlayerTwoRoundScore(score);
-                room.setPlayerTwoScore(room.getPlayerTwoScore() + score);
-
-                // If P2 failed, P1 gets a bonus attempt; otherwise go to results
-                room.setRoundPhase(solved ? "SHOWING_RESULTS" : "P1_BONUS");
-
-            } else {
-                throw new RuntimeException("Not a main turn phase: " + phase);
-            }
-
-            transaction.set(ref, room);
-            return null;
-        });
+    public void fetchSkockoSolution(String docId, String solutionField,
+                                    OnSuccessListener<List<String>> onSuccess,
+                                    OnFailureListener onFailure) {
+        db.collection("minigames")
+                .document("skocko")
+                .collection("items")
+                .document(docId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists()) {
+                        List<String> solution = (List<String>) snapshot.get(solutionField);
+                        if (solution != null && solution.size() == 4) {
+                            onSuccess.onSuccess(solution);
+                        } else {
+                            onFailure.onFailure(new Exception("Invalid solution data for field: " + solutionField));
+                        }
+                    } else {
+                        onFailure.onFailure(new Exception("Solution not found"));
+                    }
+                })
+                .addOnFailureListener(onFailure);
     }
 
-    /**
-     * Called when P1 or P2 submits their bonus attempt (one guess, 10s).
-     * P2_BONUS: P2 tries to guess P1's combination
-     * P1_BONUS: P1 tries to guess P2's combination
-     * After bonus, always goes to the next logical phase.
-     */
-    public Task<Void> finishBonusTurn(String gameId, String myUserId,
-                                      int bonusScore, boolean bonusSolved) {
-        DocumentReference ref = db.collection(COL_ROOMS).document(gameId);
-
-        return db.runTransaction(transaction -> {
-            GameRoom room = transaction.get(ref).toObject(GameRoom.class);
-            if (room == null) throw new RuntimeException("Room not found");
-
-            String phase = room.getRoundPhase();
-
-            if (phase.equals("P2_BONUS")) {
-                // P2 is attempting to guess P1's combination
-                if (!myUserId.equals(room.getPlayerTwo()))
-                    throw new RuntimeException("Not your bonus turn");
-
-                if (bonusSolved) {
-                    room.setPlayerTwoRoundScore(room.getPlayerTwoRoundScore() + bonusScore);
-                    room.setPlayerTwoScore(room.getPlayerTwoScore() + bonusScore);
-                }
-                // After P2 bonus, it's P2's main turn
-                room.setRoundPhase("P2_TURN");
-
-            } else if (phase.equals("P1_BONUS")) {
-                // P1 is attempting to guess P2's combination
-                if (!myUserId.equals(room.getPlayerOne()))
-                    throw new RuntimeException("Not your bonus turn");
-
-                if (bonusSolved) {
-                    room.setPlayerOneRoundScore(room.getPlayerOneRoundScore() + bonusScore);
-                    room.setPlayerOneScore(room.getPlayerOneScore() + bonusScore);
-                }
-                // After P1 bonus, show results
-                room.setRoundPhase("SHOWING_RESULTS");
-
-            } else {
-                throw new RuntimeException("Not a bonus phase: " + phase);
-            }
-
-            transaction.set(ref, room);
-            return null;
-        });
+    public void updateGameRoom(String gameId, Map<String, Object> updates,
+                               OnSuccessListener<Void> onSuccess,
+                               OnFailureListener onFailure) {
+        db.collection(COL_ROOMS).document(gameId)
+                .update(updates)
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
     }
 
-    public Task<Void> advanceRound(String gameId) {
-        DocumentReference ref = db.collection(COL_ROOMS).document(gameId);
-
-        return db.runTransaction(transaction -> {
-            GameRoom room = transaction.get(ref).toObject(GameRoom.class);
-            if (room == null) throw new RuntimeException("Room not found");
-
-            if (!"SHOWING_RESULTS".equals(room.getRoundPhase())) return null;
-
-            int nextIndex = room.getCurrentMinigameIndex() + 1;
-
-            if (nextIndex >= room.getMinigamePlaylist().size()) {
-                room.setGameState("FINISHED");
-            } else {
-                int nextRound = room.getRoundNumber() + 1;
-                room.setRoundNumber(nextRound);
-                room.setCurrentMinigameIndex(nextIndex);
-                room.setPlayerOneRoundScore(0);
-                room.setPlayerTwoRoundScore(0);
-                room.setP1Attempts(new ArrayList<>());
-                room.setP2Attempts(new ArrayList<>());
-                room.setP1Solved(false);
-                room.setP2Solved(false);
-
-                // Update minigame type for next round
-                String next = room.getMinigamePlaylist().get(nextIndex);
-                room.setCurrentMinigameType(next.contains(":") ? next.split(":")[0] : next);
-                if (next.startsWith("skocko:")) {
-                    room.setSkockoDocId(next.split(":")[1]);
-                }
-
-                room.setRoundPhase(nextRound % 2 == 0 ? "P1_TURN" : "P2_TURN");
-            }
-
-            transaction.set(ref, room);
-            return null;
-        });
+    public void deleteGameRoom(String gameId,
+                               OnSuccessListener<Void> onSuccess,
+                               OnFailureListener onFailure) {
+        db.collection(COL_ROOMS).document(gameId)
+                .delete()
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
     }
 
     // =========================================================================

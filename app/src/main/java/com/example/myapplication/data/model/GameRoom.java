@@ -2,6 +2,7 @@ package com.example.myapplication.data.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class GameRoom {
 
@@ -20,20 +21,11 @@ public class GameRoom {
     private int playerTwoRoundScore;
     private int roundNumber;
 
-    // --- Skocko specific ---
-    // Stores the docId of the skocko puzzle (same for both players, each reads p1/p2 solution)
-    private String skockoDocId;
-
-    // P1's guesses saved when their turn ends (so P2 can see during P2_BONUS)
-    private List<List<String>> p1Attempts; // each attempt is a list of 4 symbols
-    private boolean p1Solved;              // did P1 find the solution?
-
-    // P2's guesses saved when their turn ends (so P1 can see during P1_BONUS)
-    private List<List<String>> p2Attempts;
-    private boolean p2Solved;
-
-    // Current minigame type so fragments know what to load
     private String currentMinigameType; // "skocko", "memory", "quiz", etc.
+
+    // Each entry: { "guess": ["skocko","srce",...], "feedback": ["CORRECT","ABSENT",...] }
+    private List<Map<String, Object>> p1GuessHistory = new ArrayList<>();
+    private List<Map<String, Object>> p2GuessHistory = new ArrayList<>();
 
     public GameRoom() {}
 
@@ -53,10 +45,6 @@ public class GameRoom {
         this.playerOneRoundScore = 0;
         this.playerTwoRoundScore = 0;
 
-        this.p1Attempts = new ArrayList<>();
-        this.p2Attempts = new ArrayList<>();
-        this.p1Solved = false;
-        this.p2Solved = false;
     }
 
     // --- Existing getters/setters ---
@@ -99,22 +87,12 @@ public class GameRoom {
     public int getRoundNumber() { return roundNumber; }
     public void setRoundNumber(int roundNumber) { this.roundNumber = roundNumber; }
 
-    // --- Skocko getters/setters ---
-    public String getSkockoDocId() { return skockoDocId; }
-    public void setSkockoDocId(String skockoDocId) { this.skockoDocId = skockoDocId; }
-
-    public List<List<String>> getP1Attempts() { return p1Attempts; }
-    public void setP1Attempts(List<List<String>> p1Attempts) { this.p1Attempts = p1Attempts; }
-
-    public boolean isP1Solved() { return p1Solved; }
-    public void setP1Solved(boolean p1Solved) { this.p1Solved = p1Solved; }
-
-    public List<List<String>> getP2Attempts() { return p2Attempts; }
-    public void setP2Attempts(List<List<String>> p2Attempts) { this.p2Attempts = p2Attempts; }
-
-    public boolean isP2Solved() { return p2Solved; }
-    public void setP2Solved(boolean p2Solved) { this.p2Solved = p2Solved; }
-
     public String getCurrentMinigameType() { return currentMinigameType; }
     public void setCurrentMinigameType(String currentMinigameType) { this.currentMinigameType = currentMinigameType; }
+
+    public List<Map<String, Object>> getP1GuessHistory() { return p1GuessHistory; }
+    public void setP1GuessHistory(List<Map<String, Object>> p1GuessHistory) { this.p1GuessHistory = p1GuessHistory; }
+
+    public List<Map<String, Object>> getP2GuessHistory() { return p2GuessHistory; }
+    public void setP2GuessHistory(List<Map<String, Object>> p2GuessHistory) { this.p2GuessHistory = p2GuessHistory; }
 }

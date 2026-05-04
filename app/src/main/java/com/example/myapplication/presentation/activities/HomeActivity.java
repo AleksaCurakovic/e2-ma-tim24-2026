@@ -74,10 +74,11 @@ public class HomeActivity extends AppCompatActivity {
         dropdownMenu = findViewById(R.id.dropdownMenu);
 
         btnMenu.setOnClickListener(v -> toggleDropdown());
-        if (!isRegistered)
-            return;
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         homeViewModel.loadUser();
+
+        if (!isRegistered)
+            return;
 
         homeViewModel.currentUser.observe(this, user -> {
             if (user != null) {

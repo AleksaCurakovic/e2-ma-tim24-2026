@@ -1,173 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="?attr/colorPrimary"
-    android:padding="16dp">
+    android:fillViewport="true"
+    android:background="#F5F5F5">
 
-    <!-- Title -->
-    <TextView
-        android:id="@+id/tvSkockoTitle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Skočko"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:paddingBottom="4dp"/>
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center_horizontal">
 
-    <!-- Instruction -->
-    <TextView
-        android:id="@+id/tvSkockoInstruction"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Pogodi kombinaciju!"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:paddingBottom="8dp"/>
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Your turn!"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="4dp"/>
 
-    <!-- Progress bar timer -->
-    <ProgressBar
-        android:id="@+id/skockoProgressBar"
-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-        android:layout_width="match_parent"
-        android:layout_height="12dp"
-        android:max="100"
-        android:progress="100"
-        android:layout_marginBottom="12dp"/>
+        <TextView
+            android:id="@+id/tvTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="30s"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/holo_red_dark"
+            android:layout_marginBottom="24dp"/>
 
-    <!-- Past attempts scroll -->
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        <GridLayout
+            android:id="@+id/gridGuesses"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:columnCount="4"
+            android:rowCount="6"
+            android:layout_marginBottom="32dp"/>
 
-        <LinearLayout
-            android:id="@+id/layoutAttempts"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Symbols"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:layout_marginBottom="12dp"/>
+
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal"/>
+            android:scrollbars="none"
+            android:layout_marginBottom="16dp">
 
-    </ScrollView>
+            <LinearLayout
+                android:id="@+id/layoutSymbolPicker"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"/>
 
-    <!-- Current attempt row being built -->
-    <LinearLayout
-        android:id="@+id/layoutCurrentRow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        </HorizontalScrollView>
 
-        <!-- Filled dynamically by SkockoFragment -->
-
-    </LinearLayout>
-
-    <!-- Row action buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingBottom="8dp">
-
-        <Button
-            android:id="@+id/btnClearAttempt"
-            android:layout_width="0dp"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirmGuess"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Obriši"
-            android:layout_marginEnd="8dp"/>
-
-        <Button
-            android:id="@+id/btnSubmitAttempt"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Potvrdi"/>
+            android:text="Confirm Guess"
+            android:textSize="16sp"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp"
+            android:enabled="false"/>
 
     </LinearLayout>
 
-    <!-- Symbol picker -->
-    <LinearLayout
-        android:id="@+id/layoutSymbolPicker"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingTop="4dp"
-        android:paddingBottom="8dp">
-
-        <ImageButton
-            android:id="@+id/btnSkocko"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:src="@drawable/skocko"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Skočko"
-            android:scaleType="fitCenter"
-            android:padding="4dp"/>
-
-        <ImageButton
-            android:id="@+id/btnKvadrat"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:src="@drawable/square"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Kvadrat"
-            android:scaleType="fitCenter"
-            android:padding="4dp"/>
-
-        <ImageButton
-            android:id="@+id/btnKrug"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:src="@drawable/circle"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Krug"
-            android:scaleType="fitCenter"
-            android:padding="4dp"/>
-
-        <ImageButton
-            android:id="@+id/btnSrce"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:src="@drawable/heart"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Srce"
-            android:scaleType="fitCenter"
-            android:padding="4dp"/>
-
-        <ImageButton
-            android:id="@+id/btnTrougao"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:src="@drawable/triangle"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Trougao"
-            android:scaleType="fitCenter"
-            android:padding="4dp"/>
-
-        <ImageButton
-            android:id="@+id/btnZvezda"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:src="@drawable/star"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Zvezda"
-            android:scaleType="fitCenter"
-            android:padding="4dp"/>
-
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

@@ -4,7 +4,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
-import android.widget.ProgressBar;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -13,42 +14,31 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
 import com.example.myapplication.R;
-import com.example.myapplication.data.model.GameRoom;
 import com.example.myapplication.presentation.viewModel.GameViewModel;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class GameFragment extends Fragment {
 
+    private static final Map<String, Class<? extends Fragment>> MINIGAME_REGISTRY = new HashMap<>();
+    static {
+        MINIGAME_REGISTRY.put("skocko", SkockoFragment.class);
+    }
+
     private GameViewModel vm;
     private String gameId;
-    private String myId;
+    private String myUsername;
+    private String currentMinigameType = null;
+    private boolean navigatedToResults = false;
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable resultsRunnable;
 
-    private String lastHandledPhase = "";
-
-    private final Handler timerHandler = new Handler(Looper.getMainLooper());
-    private Runnable timerRunnable;
-    private Runnable advanceRunnable;
-
-    // Progress bar timer state
-    private ProgressBar progressBar;
-    private int timerDurationMs;
-    private long timerStartMs;
-
-    // Runnable that updates progress bar every 100ms
-    private final Runnable progressUpdater = new Runnable() {
-        @Override
-        public void run() {
-            if (progressBar == null) return;
-            long elapsed = System.currentTimeMillis() - timerStartMs;
-            long remaining = timerDurationMs - elapsed;
-            if (remaining <= 0) {
-                progressBar.setProgress(0);
-                return;
-            }
-            int progress = (int) ((remaining * 100) / timerDurationMs);
-            progressBar.setProgress(progress);
-            timerHandler.postDelayed(this, 100);
-        }
-    };
+    private FrameLayout layoutGame;
+    private LinearLayout layoutResults;
+    private TextView tvRoundScoreOne;
+    private TextView tvRoundScoreTwo;
+    private TextView tvCountdown;
 
     public GameFragment() {
         super(R.layout.fragment_game);
@@ -58,135 +48,138 @@ public class GameFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle b) {
         vm = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
 
-        gameId = getArguments().getString("gameId");
-        myId   = vm.myUsername.getValue();
+        gameId     = getArguments() != null ? getArguments().getString("gameId") : null;
+        myUsername = getArguments() != null ? getArguments().getString("myUsername") : vm.myUsername.getValue();
 
-        progressBar = view.findViewById(R.id.skockoProgressBar);
-
+        initializeViews(view);
         vm.listen(gameId);
+
+        observeGameRoom(view);
+    }
+
+    private void initializeViews(View view) {
+        layoutGame = view.findViewById(R.id.layoutGame);
+        layoutResults = view.findViewById(R.id.layoutResults);
+        tvRoundScoreOne = view.findViewById(R.id.tvRoundScoreOne);
+        tvRoundScoreTwo = view.findViewById(R.id.tvRoundScoreTwo);
+        tvCountdown = view.findViewById(R.id.tvCountdown);
+    }
+
+    private void observeGameRoom(View view) {
+        TextView tvPlayerOneName = view.findViewById(R.id.tvPlayerOneName);
+        TextView tvPlayerTwoName = view.findViewById(R.id.tvPlayerTwoName);
+        TextView tvPlayerOneScore = view.findViewById(R.id.tvPlayerOneScore);
+        TextView tvPlayerTwoScore = view.findViewById(R.id.tvPlayerTwoScore);
+        TextView tvMinigameLabel = view.findViewById(R.id.tvMinigameLabel);
 
         vm.gameRoom.observe(getViewLifecycleOwner(), room -> {
             if (room == null) return;
 
+            tvPlayerOneName.setText(room.getPlayerOne());
+            tvPlayerTwoName.setText(room.getPlayerTwo());
+            tvPlayerOneScore.setText(String.valueOf(room.getPlayerOneScore()));
+            tvPlayerTwoScore.setText(String.valueOf(room.getPlayerTwoScore()));
+
+            int current = room.getCurrentMinigameIndex() + 1;
+            int total = room.getMinigamePlaylist() != null ? room.getMinigamePlaylist().size() : 0;
+            tvMinigameLabel.setText("Minigame " + current + " / " + total);
+
             if ("FINISHED".equals(room.getGameState())) {
-                cancelAllTimers();
-                navigateToResults();
+                if (!navigatedToResults) {
+                    navigatedToResults = true;
+                    navigateToResults();
+                }
                 return;
             }
 
             String phase = room.getRoundPhase();
-            if (phase.equals(lastHandledPhase)) return;
-            lastHandledPhase = phase;
+            if ("SHOWING_RESULTS".equals(phase)) {
+                showResults(room);
+            } else {
+                layoutResults.setVisibility(View.GONE);
+                layoutGame.setVisibility(View.VISIBLE);
 
-            cancelAllTimers();
-
-            switch (phase) {
-
-                case "P1_TURN":
-                    if (myId.equals(room.getPlayerOne())) {
-                        navigateToSkocko(room, false); // false = main turn, not bonus
-                    } else {
-                        showWaiting(room.getPlayerOne() + " is playing...");
-                    }
-                    break;
-
-                case "P2_BONUS":
-                    // P1 failed — P2 gets 10s to guess P1's combination
-                    if (myId.equals(room.getPlayerTwo())) {
-                        navigateToSkockoBonus(room); // P2 sees P1's attempts + gets 1 guess
-                    } else {
-                        showWaiting("Waiting for " + room.getPlayerTwo() + "'s bonus attempt...");
-                    }
-                    break;
-
-                case "P2_TURN":
-                    if (myId.equals(room.getPlayerTwo())) {
-                        navigateToSkocko(room, false);
-                    } else {
-                        showWaiting(room.getPlayerTwo() + " is playing...");
-                    }
-                    break;
-
-                case "P1_BONUS":
-                    // P2 failed — P1 gets 10s to guess P2's combination
-                    if (myId.equals(room.getPlayerOne())) {
-                        navigateToSkockoBonus(room); // P1 sees P2's attempts + gets 1 guess
-                    } else {
-                        showWaiting("Waiting for " + room.getPlayerOne() + "'s bonus attempt...");
-                    }
-                    break;
-
-                case "SHOWING_RESULTS":
-                    showResults(room);
-                    startProgressTimer(5000, () -> {
-                        // Only playerOne advances to avoid double-firing
-                        if (myId.equals(room.getPlayerOne())) {
-                            vm.advanceRound(gameId);
-                        }
-                    });
-                    break;
+                String minigameType = room.getCurrentMinigameType();
+                if (minigameType != null && !minigameType.equals(currentMinigameType)) {
+                    currentMinigameType = minigameType;
+                    loadMinigameFragment(minigameType);
+                }
             }
         });
     }
 
-    // =========================================================================
-    // NAVIGATION TO MINIGAMES
-    // =========================================================================
+    private void loadMinigameFragment(String type) {
+        Class<? extends Fragment> fragmentClass = MINIGAME_REGISTRY.get(type);
+        if (fragmentClass == null) {
+            vm.errorMessage.postValue("Unknown minigame: " + type);
+            return;
+        }
 
-    private void navigateToSkocko(GameRoom room, boolean isBonusMode) {
-        // Load puzzle data first, then navigate
-        boolean isPlayerOne = myId.equals(room.getPlayerOne());
-        String docId = room.getSkockoDocId();
+        try {
+            Fragment minigameFragment = fragmentClass.newInstance();
+            Bundle args = new Bundle();
+            args.putString("gameId", gameId);
+            args.putString("myUsername", myUsername);
+            minigameFragment.setArguments(args);
 
-        vm.loadSkockoData(docId, isPlayerOne);
-
-        Bundle args = new Bundle();
-        args.putString("gameId", gameId);
-        args.putBoolean("isBonusMode", isBonusMode);
-        args.putInt("turnDurationMs", 30000);
-
-        Navigation.findNavController(requireView())
-                .navigate(R.id.action_gameFragment_to_skockoFragment, args);
+            getChildFragmentManager().beginTransaction()
+                    .replace(R.id.layoutGame, minigameFragment)
+                    .commit();
+        } catch (Exception e) {
+            vm.errorMessage.postValue("Failed to load minigame: " + e.getMessage());
+        }
     }
 
-    private void navigateToSkockoBonus(GameRoom room) {
-        boolean isPlayerOne = myId.equals(room.getPlayerOne());
-        String docId = room.getSkockoDocId();
+    private void showResults(com.example.myapplication.data.model.GameRoom room) {
+        layoutGame.setVisibility(View.GONE);
+        layoutResults.setVisibility(View.VISIBLE);
 
-        vm.loadSkockoData(docId, isPlayerOne);
+        tvRoundScoreOne.setText("+" + room.getPlayerOneRoundScore());
+        tvRoundScoreTwo.setText("+" + room.getPlayerTwoRoundScore());
+        tvCountdown.setText("Next round in 3s...");
 
-        Bundle args = new Bundle();
-        args.putString("gameId", gameId);
-        args.putBoolean("isBonusMode", true);
-        args.putInt("turnDurationMs", 10000);
+        if (resultsRunnable != null) {
+            handler.removeCallbacks(resultsRunnable);
+        }
 
-        Navigation.findNavController(requireView())
-                .navigate(R.id.action_gameFragment_to_skockoFragment, args);
+        resultsRunnable = () -> {
+            com.example.myapplication.data.model.GameRoom current = vm.gameRoom.getValue();
+            if (current != null && myUsername.equals(current.getPlayerOne())) {
+                advanceToNextRound(current);
+            }
+        };
+        handler.postDelayed(resultsRunnable, 3000);
     }
 
-    // =========================================================================
-    // UI STATES (waiting + results shown directly in GameFragment)
-    // =========================================================================
+    private void advanceToNextRound(com.example.myapplication.data.model.GameRoom room) {
+        int roundNum = room.getRoundNumber();
+        int nextIndex = room.getCurrentMinigameIndex();
 
-    private void showWaiting(String message) {
-        requireView().findViewById(R.id.layoutResults).setVisibility(View.GONE);
-        requireView().findViewById(R.id.layoutWaiting).setVisibility(View.VISIBLE);
-        ((TextView) requireView().findViewById(R.id.tvWaiting)).setText(message);
-        startProgressTimer(30000, null); // show passive timer while waiting
-    }
+        Map<String, Object> updates = new HashMap<>();
 
-    private void showResults(GameRoom room) {
-        requireView().findViewById(R.id.layoutWaiting).setVisibility(View.GONE);
-        requireView().findViewById(R.id.layoutResults).setVisibility(View.VISIBLE);
+        if (roundNum == 0) {
+            updates.put("roundNumber", 1);
+            updates.put("playerOneRoundScore", 0);
+            updates.put("playerTwoRoundScore", 0);
+            updates.put("roundPhase", "P2_TURN");
+        } else if (roundNum == 1) {
+            nextIndex++;
+            if (nextIndex >= room.getMinigamePlaylist().size()) {
+                updates.put("gameState", "FINISHED");
+            } else {
+                updates.put("currentMinigameIndex", nextIndex);
+                updates.put("roundNumber", 0);
+                updates.put("playerOneRoundScore", 0);
+                updates.put("playerTwoRoundScore", 0);
+                updates.put("roundPhase", "P1_TURN");
+                
+                String next = room.getMinigamePlaylist().get(nextIndex);
+                String type = next.contains(":") ? next.split(":")[0] : next;
+                updates.put("currentMinigameType", type);
+            }
+        }
 
-        ((TextView) requireView().findViewById(R.id.tvRoundScoreOne))
-                .setText("+" + room.getPlayerOneRoundScore());
-        ((TextView) requireView().findViewById(R.id.tvRoundScoreTwo))
-                .setText("+" + room.getPlayerTwoRoundScore());
-        ((TextView) requireView().findViewById(R.id.tvRoundLabelOne))
-                .setText(room.getPlayerOne());
-        ((TextView) requireView().findViewById(R.id.tvRoundLabelTwo))
-                .setText(room.getPlayerTwo());
+        vm.advancePhase(gameId, updates);
     }
 
     private void navigateToResults() {
@@ -196,41 +189,11 @@ public class GameFragment extends Fragment {
                 .navigate(R.id.action_gameFragment_to_resultsFragment, args);
     }
 
-    // =========================================================================
-    // TIMER + PROGRESS BAR
-    // =========================================================================
-
-    /**
-     * Starts the progress bar countdown and fires onFinish when done.
-     * onFinish can be null (e.g. for passive waiting display).
-     */
-    private void startProgressTimer(int durationMs, Runnable onFinish) {
-        timerDurationMs = durationMs;
-        timerStartMs    = System.currentTimeMillis();
-
-        if (progressBar != null) {
-            progressBar.setMax(100);
-            progressBar.setProgress(100);
-            timerHandler.post(progressUpdater);
-        }
-
-        if (onFinish != null) {
-            advanceRunnable = onFinish;
-            timerHandler.postDelayed(advanceRunnable, durationMs);
-        }
-    }
-
-    private void cancelAllTimers() {
-        timerHandler.removeCallbacks(progressUpdater);
-        if (advanceRunnable != null) {
-            timerHandler.removeCallbacks(advanceRunnable);
-            advanceRunnable = null;
-        }
-    }
-
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        cancelAllTimers();
+        if (resultsRunnable != null) {
+            handler.removeCallbacks(resultsRunnable);
+        }
     }
 }

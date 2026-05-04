@@ -11,11 +11,8 @@ import com.example.myapplication.service.GameService;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.List;
+import java.util.Map;
 
-/**
- * Single shared ViewModel for the entire game session.
- * Holds all LiveData the UI observes; no game logic lives here.
- */
 public class GameViewModel extends ViewModel {
 
     private final GameRepository repository = new GameRepository();
@@ -35,14 +32,7 @@ public class GameViewModel extends ViewModel {
     public final MutableLiveData<String>       playerOne = new MutableLiveData<>();
     public final MutableLiveData<String>       playerTwo = new MutableLiveData<>();
     public final MutableLiveData<List<String>> playlist  = new MutableLiveData<>();
-
-    // Timer
-    public final MutableLiveData<Long> timerMillisLeft = new MutableLiveData<>(0L);
-    private CountDownTimer countDownTimer;
-
-    // Skocko puzzle data (loaded once per round, lives locally on this device)
-    public final MutableLiveData<List<String>> mySkockoSolution       = new MutableLiveData<>();
-    public final MutableLiveData<List<String>> opponentSkockoSolution = new MutableLiveData<>();
+    public final MutableLiveData<String>       currentPhase = new MutableLiveData<>();
 
     // =========================================================================
     // MATCHMAKING
@@ -63,85 +53,50 @@ public class GameViewModel extends ViewModel {
                 });
     }
 
+    private boolean listening = false;
+
     public void listen(String gameId) {
+        if (listening) return;
+        listening = true;
         repository.listenToGameRoom(gameId,
                 room -> {
                     gameRoom.postValue(room);
                     playerOne.postValue(room.getPlayerOne());
                     playerTwo.postValue(room.getPlayerTwo());
                     playlist.postValue(room.getMinigamePlaylist());
+                    currentPhase.postValue(room.getRoundPhase());
                 },
                 e -> errorMessage.postValue("Sync error: " + e.getMessage())
         );
     }
 
-    // =========================================================================
-    // SKOCKO DATA
-    // =========================================================================
-
-    /**
-     * Loads puzzle solutions from Firestore. Each device loads both solutions
-     * but shows only their own during gameplay (opponent's shown during bonus).
-     */
-    public void loadSkockoData(String docId, boolean isPlayerOne) {
-        repository.fetchSkockoData(docId,
-                snapshot -> {
-                    if (snapshot == null || !snapshot.exists()) {
-                        errorMessage.postValue("Skocko puzzle not found");
-                        return;
-                    }
-                    List<String> p1Sol = (List<String>) snapshot.get("p1Solution");
-                    List<String> p2Sol = (List<String>) snapshot.get("p2Solution");
-
-                    if (isPlayerOne) {
-                        mySkockoSolution.postValue(p1Sol);
-                        opponentSkockoSolution.postValue(p2Sol);
-                    } else {
-                        mySkockoSolution.postValue(p2Sol);
-                        opponentSkockoSolution.postValue(p1Sol);
-                    }
-                },
-                e -> errorMessage.postValue("Failed to load puzzle: " + e.getMessage())
+    public void advancePhase(String gameId, Map<String, Object> updates) {
+        gameService.updateGameRoom(gameId, updates,
+                unused -> {},
+                e -> errorMessage.postValue("Failed to update: " + e.getMessage())
         );
     }
 
-    // =========================================================================
-    // TURN MANAGEMENT
-    // =========================================================================
-
-    public void finishMainTurn(String gameId, String myId, int score,
-                               List<List<String>> attempts, boolean solved) {
-        gameService.finishMainTurn(gameId, myId, score, attempts, solved,
-                unused -> { /* Firestore listener handles UI update */ },
-                e -> errorMessage.postValue("Failed to save turn: " + e.getMessage())
+    public void deleteRoom(String gameId) {
+        gameService.deleteGameRoom(gameId,
+                unused -> {},
+                e -> errorMessage.postValue("Failed to delete room: " + e.getMessage())
         );
     }
 
-    public void finishBonusTurn(String gameId, String myId,
-                                int bonusScore, boolean bonusSolved) {
-        gameService.finishBonusTurn(gameId, myId, bonusScore, bonusSolved,
-                unused -> { /* Firestore listener handles UI update */ },
-                e -> errorMessage.postValue("Failed to save bonus: " + e.getMessage())
-        );
+    public void fetchSkockoSolution(String docId, String solutionField,
+                                    com.google.android.gms.tasks.OnSuccessListener<List<String>> onSuccess,
+                                    com.google.android.gms.tasks.OnFailureListener onFailure) {
+        gameService.fetchSkockoSolution(docId, solutionField, onSuccess, onFailure);
     }
 
-    public void advanceRound(String gameId) {
-        gameService.advanceRound(gameId,
-                unused -> { /* Firestore listener handles UI update */ },
-                e -> errorMessage.postValue("Failed to advance: " + e.getMessage())
-        );
+    public List<String> calculateFeedback(List<String> guess, List<String> solution) {
+        return gameService.calculateFeedback(guess, solution);
     }
-
-    // =========================================================================
-    // CLEANUP
-    // =========================================================================
 
     @Override
     public void onCleared() {
         super.onCleared();
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-        }
-        gameService.detachListeners();
+        repository.detachListeners();
     }
 }

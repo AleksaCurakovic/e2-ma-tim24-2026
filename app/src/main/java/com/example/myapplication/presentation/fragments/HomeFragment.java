@@ -74,11 +74,15 @@ public class HomeFragment extends Fragment {
 
         // Navigate when game is found
         gameViewModel.navigateToGame.observe(getViewLifecycleOwner(), gameId -> {
-            Bundle b = new Bundle();
-            b.putString("gameId", gameId);
-
-            Navigation.findNavController(requireView())
-                    .navigate(R.id.action_homeFragment_to_gameFragment, b);
+            if (gameId != null) {
+                Bundle b = new Bundle();
+                b.putString("gameId", gameId);
+                String username = gameViewModel.myUsername.getValue();
+                b.putString("myUsername", username != null ? username : "");
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.action_homeFragment_to_gameFragment, b);
+                gameViewModel.navigateToGame.setValue(null);
+            }
         });
 
         // Show errors
