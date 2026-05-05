@@ -27,6 +27,14 @@ public class GameRoom {
     private List<Map<String, Object>> p1GuessHistory = new ArrayList<>();
     private List<Map<String, Object>> p2GuessHistory = new ArrayList<>();
 
+    // Moj Broj per-round fields
+    private Object mojBrojTarget;
+    private List<Object> mojBrojNumbers;
+    private int    mojBrojP1Result;
+    private int    mojBrojP2Result;
+    private boolean mojBrojP1Submitted;
+    private boolean mojBrojP2Submitted;
+
     public GameRoom() {}
 
     public GameRoom(String gameId, String playerOne, String playerTwo, List<String> playlist) {
@@ -95,4 +103,22 @@ public class GameRoom {
 
     public List<Map<String, Object>> getP2GuessHistory() { return p2GuessHistory; }
     public void setP2GuessHistory(List<Map<String, Object>> p2GuessHistory) { this.p2GuessHistory = p2GuessHistory; }
+
+    public Object getMojBrojTarget() { return mojBrojTarget; }
+    public void setMojBrojTarget(Object mojBrojTarget) { this.mojBrojTarget = mojBrojTarget; }
+
+    public List<Object> getMojBrojNumbers() { return mojBrojNumbers; }
+    public void setMojBrojNumbers(List<Object> mojBrojNumbers) { this.mojBrojNumbers = mojBrojNumbers; }
+
+    public int getMojBrojP1Result() { return mojBrojP1Result; }
+    public void setMojBrojP1Result(int mojBrojP1Result) { this.mojBrojP1Result = mojBrojP1Result; }
+
+    public int getMojBrojP2Result() { return mojBrojP2Result; }
+    public void setMojBrojP2Result(int mojBrojP2Result) { this.mojBrojP2Result = mojBrojP2Result; }
+
+    public Boolean getMojBrojP1Submitted() { return mojBrojP1Submitted; }
+    public void setMojBrojP1Submitted(boolean mojBrojP1Submitted) { this.mojBrojP1Submitted = mojBrojP1Submitted; }
+
+    public Boolean getMojBrojP2Submitted() { return mojBrojP2Submitted; }
+    public void setMojBrojP2Submitted(boolean mojBrojP2Submitted) { this.mojBrojP2Submitted = mojBrojP2Submitted; }
 }

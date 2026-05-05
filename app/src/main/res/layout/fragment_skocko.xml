@@ -45,7 +45,55 @@
             android:layout_height="wrap_content"
             android:columnCount="4"
             android:rowCount="6"
-            android:layout_marginBottom="32dp"/>
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Feedback legend -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
+
+            <View
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:background="@drawable/bg_feedback_correct"
+                android:layout_marginEnd="4dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tačno mesto"
+                android:textSize="11sp"
+                android:textColor="#555555"
+                android:layout_marginEnd="14dp"/>
+
+            <View
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:background="@drawable/bg_feedback_present"
+                android:layout_marginEnd="4dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pogrešno mesto"
+                android:textSize="11sp"
+                android:textColor="#555555"
+                android:layout_marginEnd="14dp"/>
+
+            <View
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:background="@drawable/bg_feedback_absent"
+                android:layout_marginEnd="4dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nije u rešenju"
+                android:textSize="11sp"
+                android:textColor="#555555"/>
+
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"

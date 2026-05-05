@@ -105,14 +105,19 @@ public class KorakFragment extends Fragment {
     private void onPhaseChanged(String phase) {
         GameRoom room = vm.gameRoom.getValue();
         if (room == null) return;
+        if (!"korakPoKorak".equals(room.getCurrentMinigameType())) return;
 
         isBonusMode = phase.contains("BONUS");
         isMyTurn    = isActivePlayer(phase, room);
 
         if (!isMyTurn) {
-            if (phase.equals("SHOWING_RESULTS")) lastStartedPhase = null;
-            showWaiting("Čekaj...");
+            lastStartedPhase = null;
             cancelTimer();
+            if (phase.equals("MINIGAME_DONE")) {
+                showWaiting("Kraj runde!");
+            } else {
+                showWaiting("Čekaj na protivnika...");
+            }
             return;
         }
 
@@ -137,6 +142,8 @@ public class KorakFragment extends Fragment {
         tvTimer.setText("");
         tvTimer.setVisibility(View.INVISIBLE);
         layoutAnswerInput.setVisibility(View.GONE);
+        layoutSteps.removeAllViews();
+        revealedSteps = 0;
     }
 
     // =========================================================================
@@ -148,23 +155,24 @@ public class KorakFragment extends Fragment {
         String entry        = room.getMinigamePlaylist().get(room.getCurrentMinigameIndex());
         String docId        = entry.contains(":") ? entry.split(":")[1] : entry;
         String playerPrefix = playerPrefixForPhase(phase);
-
         vm.fetchKorakSolution(docId, playerPrefix,
                 data -> {
                     answer = (String) data.get("answer");
                     steps  = (List<String>) data.get("steps");
                     startTurn(room, phase);
                 },
-                e -> tvStatus.setText("Greška pri učitavanju!")
+                e -> {
+                    tvStatus.setText("Nema podataka...");
+                    if (isMyTurn && myUsername.equals(vm.gameRoom.getValue() != null
+                            ? vm.gameRoom.getValue().getPlayerOne() : "")) {
+                        Map<String, Object> skip = new HashMap<>();
+                        skip.put("roundPhase", "MINIGAME_DONE");
+                        vm.advancePhase(gameId, skip);
+                    }
+                }
         );
     }
 
-    /**
-     * Main turns: each player uses their own data.
-     * Bonus turns: the bonus player sees the OTHER player's steps/answer.
-     *   P2_BONUS → p1 data (P2 tries to guess P1's answer)
-     *   P1_BONUS → p2 data (P1 tries to guess P2's answer)
-     */
     private String playerPrefixForPhase(String phase) {
         switch (phase) {
             case "P1_TURN":  return "p1";
@@ -327,9 +335,9 @@ public class KorakFragment extends Fragment {
         switch (phase) {
             case "P1_TURN":  return solved ? "P2_TURN" : "P2_BONUS";
             case "P2_BONUS": return "P2_TURN";
-            case "P2_TURN":  return solved ? "SHOWING_RESULTS" : "P1_BONUS";
-            case "P1_BONUS": return "SHOWING_RESULTS";
-            default:         return "SHOWING_RESULTS";
+            case "P2_TURN":  return solved ? "MINIGAME_DONE" : "P1_BONUS";
+            case "P1_BONUS": return "MINIGAME_DONE";
+            default:         return "MINIGAME_DONE";
         }
     }
 

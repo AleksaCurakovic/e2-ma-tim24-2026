@@ -105,15 +105,21 @@ public class SkockoFragment extends Fragment {
     private void onPhaseChanged(String phase) {
         GameRoom room = vm.gameRoom.getValue();
         if (room == null) return;
+        if (!"skocko".equals(room.getCurrentMinigameType())) return;
 
         isBonusMode = phase.contains("BONUS");
         maxGuesses  = isBonusMode ? 1 : 6;
         isMyTurn    = isActivePlayer(phase, room);
 
         if (!isMyTurn) {
-            if (phase.equals("SHOWING_RESULTS")) lastStartedPhase = null;
-            showWaiting("Čekaj...");
+            // Reset guard so this player's next active turn always starts fresh
+            lastStartedPhase = null;
             cancelTimer();
+            if (phase.equals("MINIGAME_DONE")) {
+                showWaiting("Kraj runde!");
+            } else {
+                showWaiting("Čekaj na protivnika...");
+            }
             return;
         }
 
@@ -139,6 +145,11 @@ public class SkockoFragment extends Fragment {
         tvTimer.setVisibility(View.INVISIBLE);
         layoutSymbolPicker.setVisibility(View.GONE);
         btnConfirmGuess.setVisibility(View.GONE);
+        // Clear the grid so previous attempt doesn't remain on screen
+        gridGuesses.removeAllViews();
+        currentGuess.clear();
+        localGuessHistory.clear();
+        currentRow = 0;
     }
 
     // =========================================================================
@@ -307,9 +318,9 @@ public class SkockoFragment extends Fragment {
         switch (phase) {
             case "P1_TURN":  return solved ? "P2_TURN" : "P2_BONUS";
             case "P2_BONUS": return "P2_TURN";
-            case "P2_TURN":  return solved ? "SHOWING_RESULTS" : "P1_BONUS";
-            case "P1_BONUS": return "SHOWING_RESULTS";
-            default:         return "SHOWING_RESULTS";
+            case "P2_TURN":  return solved ? "MINIGAME_DONE" : "P1_BONUS";
+            case "P1_BONUS": return "MINIGAME_DONE";
+            default:         return "MINIGAME_DONE";
         }
     }
 
@@ -450,13 +461,13 @@ public class SkockoFragment extends Fragment {
     private void renderFeedback(int row, List<String> feedback) {
         for (int col = 0; col < 4; col++) {
             ImageView cell = (ImageView) gridGuesses.getChildAt(row * 4 + col);
-            int colorRes;
+            int bgRes;
             switch (feedback.get(col)) {
-                case "CORRECT": colorRes = R.color.skocko_correct; break;
-                case "PRESENT": colorRes = R.color.skocko_present; break;
-                default:        colorRes = R.color.skocko_absent;  break;
+                case "CORRECT": bgRes = R.drawable.bg_feedback_correct; break;
+                case "PRESENT": bgRes = R.drawable.bg_feedback_present; break;
+                default:        bgRes = R.drawable.bg_feedback_absent;  break;
             }
-            cell.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes));
+            cell.setBackground(ContextCompat.getDrawable(requireContext(), bgRes));
         }
     }
 

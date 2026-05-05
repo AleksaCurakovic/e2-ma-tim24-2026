@@ -5,7 +5,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -24,7 +23,8 @@ public class GameFragment extends Fragment {
     private static final Map<String, Class<? extends Fragment>> MINIGAME_REGISTRY = new HashMap<>();
     static {
         MINIGAME_REGISTRY.put("skocko", SkockoFragment.class);
-        MINIGAME_REGISTRY.put("korak", KorakFragment.class);
+        MINIGAME_REGISTRY.put("korakPoKorak", KorakFragment.class);
+        MINIGAME_REGISTRY.put("mojbroj", MojBrojFragment.class);
     }
 
     private GameViewModel vm;
@@ -59,23 +59,9 @@ public class GameFragment extends Fragment {
     }
 
     private void observeGameRoom(View view) {
-        TextView tvPlayerOneName = view.findViewById(R.id.tvPlayerOneName);
-        TextView tvPlayerTwoName = view.findViewById(R.id.tvPlayerTwoName);
-        TextView tvPlayerOneScore = view.findViewById(R.id.tvPlayerOneScore);
-        TextView tvPlayerTwoScore = view.findViewById(R.id.tvPlayerTwoScore);
-        TextView tvMinigameLabel = view.findViewById(R.id.tvMinigameLabel);
-
         vm.gameRoom.observe(getViewLifecycleOwner(), room -> {
             if (room == null) return;
 
-            tvPlayerOneName.setText(room.getPlayerOne());
-            tvPlayerTwoName.setText(room.getPlayerTwo());
-            tvPlayerOneScore.setText(String.valueOf(room.getPlayerOneScore()));
-            tvPlayerTwoScore.setText(String.valueOf(room.getPlayerTwoScore()));
-
-            int current = room.getCurrentMinigameIndex() + 1;
-            int total = room.getMinigamePlaylist() != null ? room.getMinigamePlaylist().size() : 0;
-            tvMinigameLabel.setText("Minigame " + current + " / " + total);
 
             if ("FINISHED".equals(room.getGameState())) {
                 if (!navigatedToResults) {
@@ -86,7 +72,8 @@ public class GameFragment extends Fragment {
             }
 
             String phase = room.getRoundPhase();
-            if ("SHOWING_RESULTS".equals(phase)) {
+            if ("MINIGAME_DONE".equals(phase)) {
+                currentMinigameType = null;
                 scheduleAdvance();
             } else {
                 layoutGame.setVisibility(View.VISIBLE);
@@ -136,31 +123,20 @@ public class GameFragment extends Fragment {
     }
 
     private void advanceToNextRound(GameRoom room) {
-        int roundNum = room.getRoundNumber();
-        int nextIndex = room.getCurrentMinigameIndex();
+        int nextIndex = room.getCurrentMinigameIndex() + 1;
 
         Map<String, Object> updates = new HashMap<>();
 
-        if (roundNum == 0) {
-            updates.put("roundNumber", 1);
+        if (nextIndex >= room.getMinigamePlaylist().size()) {
+            updates.put("gameState", "FINISHED");
+        } else {
+            String next = room.getMinigamePlaylist().get(nextIndex);
+            String type = next.contains(":") ? next.split(":")[0] : next;
+            updates.put("currentMinigameIndex", nextIndex);
+            updates.put("currentMinigameType", type);
             updates.put("playerOneRoundScore", 0);
             updates.put("playerTwoRoundScore", 0);
-            updates.put("roundPhase", "P2_TURN");
-        } else if (roundNum == 1) {
-            nextIndex++;
-            if (nextIndex >= room.getMinigamePlaylist().size()) {
-                updates.put("gameState", "FINISHED");
-            } else {
-                updates.put("currentMinigameIndex", nextIndex);
-                updates.put("roundNumber", 0);
-                updates.put("playerOneRoundScore", 0);
-                updates.put("playerTwoRoundScore", 0);
-                updates.put("roundPhase", "P1_TURN");
-                
-                String next = room.getMinigamePlaylist().get(nextIndex);
-                String type = next.contains(":") ? next.split(":")[0] : next;
-                updates.put("currentMinigameType", type);
-            }
+            updates.put("roundPhase", "P1_TURN");
         }
 
         vm.advancePhase(gameId, updates);

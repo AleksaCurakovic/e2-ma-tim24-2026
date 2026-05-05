@@ -129,12 +129,15 @@ public class GameRepository {
 
     public void fetchMinigameIds(OnSuccessListener<List<String>> onSuccess,
                                  OnFailureListener onFailure) {
-        String[] categories = { "skocko", "korak" };
+        String[] categories = { "skocko", "korakPoKorak" };
 
-        List<String> result = new ArrayList<>();
+        // Pre-allocate slots to preserve fixed order regardless of callback arrival order
+        String[] result = new String[categories.length];
         AtomicInteger counter = new AtomicInteger(0);
 
-        for (String category : categories) {
+        for (int i = 0; i < categories.length; i++) {
+            final int idx = i;
+            final String category = categories[idx];
             db.collection("minigames")
                     .document(category)
                     .collection("items")
@@ -144,10 +147,18 @@ public class GameRepository {
                         if (!docs.isEmpty()) {
                             Collections.shuffle(docs);
                             // Store as "category:docId" so GameFragment knows the type
-                            result.add(category + ":" + docs.get(0).getId());
+                            result[idx] = category + ":" + docs.get(0).getId();
+                        } else {
+                            // No documents — keep placeholder so minigame slot is preserved
+                            result[idx] = category + ":missing";
                         }
                         if (counter.incrementAndGet() == categories.length) {
-                            onSuccess.onSuccess(result);
+                            List<String> playlist = new ArrayList<>();
+                            for (String entry : result) {
+                                if (entry != null) playlist.add(entry);
+                            }
+                            playlist.add("mojbroj:local");
+                            onSuccess.onSuccess(playlist);
                         }
                     })
                     .addOnFailureListener(onFailure);
@@ -202,7 +213,7 @@ public class GameRepository {
                                    OnSuccessListener<Map<String, Object>> onSuccess,
                                    OnFailureListener onFailure) {
         db.collection("minigames")
-                .document("korak")
+                .document("korakPoKorak")
                 .collection("items")
                 .document(docId)
                 .get()

@@ -94,6 +94,43 @@ public class GameViewModel extends ViewModel {
         return gameService.calculateFeedback(guess, solution);
     }
 
+    // =========================================================================
+    // MOJ BROJ
+    // =========================================================================
+
+    public int generateMojBrojTarget() {
+        return gameService.generateTarget();
+    }
+
+    public List<Integer> generateMojBrojNumbers() {
+        return gameService.generateNumbers();
+    }
+
+    public void publishMojBrojTarget(String gameId, int target) {
+        gameService.publishMojBrojTarget(gameId, target,
+                unused -> {},
+                e -> errorMessage.postValue("Failed to publish target: " + e.getMessage()));
+    }
+
+    public void publishMojBrojNumbers(String gameId, List<Integer> numbers) {
+        gameService.publishMojBrojNumbers(gameId, numbers,
+                unused -> {},
+                e -> errorMessage.postValue("Failed to publish numbers: " + e.getMessage()));
+    }
+
+    public void submitMojBrojResult(String gameId, boolean isPlayerOne, int result) {
+        gameService.submitMojBrojResult(gameId, isPlayerOne, result,
+                unused -> {},
+                e -> errorMessage.postValue("Failed to submit result: " + e.getMessage()));
+    }
+
+    public void scoreMojBrojRound(String gameId, int target, int p1Result, int p2Result,
+                                  boolean p1IsRoundOwner, int currentP1Score, int currentP2Score) {
+        Map<String, Object> updates = gameService.scoreMojBrojRound(
+                target, p1Result, p2Result, p1IsRoundOwner, currentP1Score, currentP2Score);
+        advancePhase(gameId, updates);
+    }
+
     public void fetchKorakSolution(String docId, String playerPrefix,
                                    com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
                                    com.google.android.gms.tasks.OnFailureListener onFailure) {

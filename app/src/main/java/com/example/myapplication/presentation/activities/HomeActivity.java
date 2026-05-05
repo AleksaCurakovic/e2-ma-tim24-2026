@@ -112,6 +112,19 @@ public class HomeActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(bottomNav, navController);
         bottomNav.setItemIconTintList(null);
 
+        View header = findViewById(R.id.header);
+        View bottomNavContainer = findViewById(R.id.bottomNavContainer);
+
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            int id = destination.getId();
+            if (id == R.id.gameFragment || id == R.id.resultsFragment) {
+                header.setVisibility(View.GONE);
+                bottomNavContainer.setVisibility(View.GONE);
+            } else {
+                header.setVisibility(View.VISIBLE);
+                bottomNavContainer.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     private void setupDropdownMenu() {
