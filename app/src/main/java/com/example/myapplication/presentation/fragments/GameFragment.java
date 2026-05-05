@@ -25,6 +25,9 @@ public class GameFragment extends Fragment {
         MINIGAME_REGISTRY.put("skocko", SkockoFragment.class);
         MINIGAME_REGISTRY.put("korakPoKorak", KorakFragment.class);
         MINIGAME_REGISTRY.put("mojbroj", MojBrojFragment.class);
+        MINIGAME_REGISTRY.put("quiz", QuizFragment.class);           // Ko zna zna
+        MINIGAME_REGISTRY.put("spojnice", SpojniceFragment.class);
+        MINIGAME_REGISTRY.put("asocijacije", AsocijacijeFragment.class);
     }
 
     private GameViewModel vm;

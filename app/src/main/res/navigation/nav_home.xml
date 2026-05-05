@@ -26,6 +26,11 @@
         android:label="Notifications"/>
 
     <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.myapplication.presentation.fragments.ProfileFragment"
+        android:label="Profile"/>
+
+    <fragment
         android:id="@+id/gameFragment"
         android:name="com.example.myapplication.presentation.fragments.GameFragment">
         <action

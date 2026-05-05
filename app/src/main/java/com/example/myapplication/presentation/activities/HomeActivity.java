@@ -145,17 +145,19 @@ public class HomeActivity extends AppCompatActivity {
         // Menu Item Click Listeners
         findViewById(R.id.menuProfile).setOnClickListener(v -> {
             closeDropdown();
-            // Navigation logic: navController.navigate(R.id.profile_dest);
+            NavHostFragment host = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.homeNavHost);
+            if (host != null) {
+                NavController c = host.getNavController();
+                c.navigate(R.id.profileFragment);
+            }
         });
 
         findViewById(R.id.menuRegions).setOnClickListener(v -> {
             closeDropdown();
-            // Navigation logic: navController.navigate(R.id.regions_dest);
         });
 
         findViewById(R.id.menuTournaments).setOnClickListener(v -> {
             closeDropdown();
-            // Navigation logic: navController.navigate(R.id.tournaments_dest);
         });
     }
 

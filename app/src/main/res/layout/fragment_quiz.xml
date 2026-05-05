@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#F5F5F5">
+
+    <TextView
+        android:id="@+id/tvQuizTimer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="25s"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:background="@drawable/bg_timer_pill"
+        android:textColor="@color/white"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:layout_gravity="end"
+        android:layout_marginBottom="12dp"/>
+
+    <TextView
+        android:id="@+id/tvQuizQuestion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Question"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp"/>
+
+    <LinearLayout
+        android:id="@+id/layoutQuizAnswers"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:divider="@android:color/transparent"
+        android:showDividers="middle"
+        android:dividerPadding="8dp"/>
+
+    <TextView
+        android:id="@+id/tvQuizResult"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:textColor="#333"
+        android:visibility="gone"
+        android:layout_marginTop="12dp"/>
+
+</LinearLayout>
