@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.GridLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -49,6 +50,8 @@ public class SkockoFragment extends Fragment {
     private TextView tvTimer;
     private GridLayout gridGuesses;
     private LinearLayout layoutSymbolPicker;
+    private HorizontalScrollView scrollSymbolPicker;
+    private TextView tvSelectSymbols;
     private MaterialButton btnConfirmGuess;
 
     private List<String> solution;
@@ -81,8 +84,10 @@ public class SkockoFragment extends Fragment {
         tvStatus          = view.findViewById(R.id.tvStatus);
         tvTimer           = view.findViewById(R.id.tvTimer);
         gridGuesses       = view.findViewById(R.id.gridGuesses);
-        layoutSymbolPicker = view.findViewById(R.id.layoutSymbolPicker);
-        btnConfirmGuess   = view.findViewById(R.id.btnConfirmGuess);
+        layoutSymbolPicker  = view.findViewById(R.id.layoutSymbolPicker);
+        scrollSymbolPicker  = view.findViewById(R.id.scrollSymbolPicker);
+        tvSelectSymbols     = view.findViewById(R.id.tvSelectSymbols);
+        btnConfirmGuess     = view.findViewById(R.id.btnConfirmGuess);
 
         setupSymbolPicker();
         btnConfirmGuess.setOnClickListener(v -> submitGuess());
@@ -143,6 +148,8 @@ public class SkockoFragment extends Fragment {
         tvStatus.setText(message);
         tvTimer.setText("");
         tvTimer.setVisibility(View.INVISIBLE);
+        tvSelectSymbols.setVisibility(View.GONE);
+        scrollSymbolPicker.setVisibility(View.GONE);
         layoutSymbolPicker.setVisibility(View.GONE);
         btnConfirmGuess.setVisibility(View.GONE);
         // Clear the grid so previous attempt doesn't remain on screen
@@ -213,6 +220,8 @@ public class SkockoFragment extends Fragment {
 
         tvStatus.setText(isBonusMode ? "Bonus potez!" : "Tvoj red!");
         tvTimer.setVisibility(View.VISIBLE);
+        tvSelectSymbols.setVisibility(View.VISIBLE);
+        scrollSymbolPicker.setVisibility(View.VISIBLE);
         layoutSymbolPicker.setVisibility(View.VISIBLE);
         btnConfirmGuess.setVisibility(View.VISIBLE);
         btnConfirmGuess.setEnabled(false);

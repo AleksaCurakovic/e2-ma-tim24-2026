@@ -34,4 +34,18 @@ public class AuthService {
     public void logout() {
         repository.logout();
     }
+
+    public boolean isGuest() {
+        return repository.isGuest();
+    }
+
+    public void deductToken(OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        repository.deductToken(onSuccess, onFailure);
+    }
+
+    public void applyGameRewards(int starsDelta,
+                                  OnSuccessListener<Void> onSuccess,
+                                  OnFailureListener onFailure) {
+        repository.applyGameRewards(starsDelta, onSuccess, onFailure);
+    }
 }

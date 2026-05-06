@@ -137,6 +137,10 @@ public class GameViewModel extends ViewModel {
         gameService.fetchKorakSolution(docId, playerPrefix, onSuccess, onFailure);
     }
 
+    public int computeStarsDelta(int myScore, boolean iWon) {
+        return gameService.computeStarsDelta(myScore, iWon);
+    }
+
     @Override
     public void onCleared() {
         super.onCleared();

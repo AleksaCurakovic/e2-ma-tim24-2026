@@ -38,6 +38,9 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         isRegistered = getIntent().getBooleanExtra("isRegistered", false);
+        new ViewModelProvider(this).get(
+                com.example.myapplication.presentation.viewModel.HomeViewModel.class)
+                .setRegistered(isRegistered);
         setupBottomNav();
         setupHeader();
         setupDropdownMenu();

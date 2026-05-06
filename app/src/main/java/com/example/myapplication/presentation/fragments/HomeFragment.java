@@ -61,9 +61,18 @@ public class HomeFragment extends Fragment {
                         Toast.LENGTH_SHORT).show();
                 return;
             }
-            gameViewModel.startMatchmaking(
-                    user.getUsername()
-            );
+            if (!homeViewModel.isRegistered()) {
+                gameViewModel.startMatchmaking(user.getUsername());
+            } else {
+                btnPlay.setEnabled(false);
+                homeViewModel.deductToken(
+                        unused -> gameViewModel.startMatchmaking(user.getUsername()),
+                        e -> {
+                            btnPlay.setEnabled(true);
+                            Toast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                );
+            }
         });
 
         // Show loading state on button

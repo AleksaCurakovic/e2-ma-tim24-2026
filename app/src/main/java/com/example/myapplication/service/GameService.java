@@ -186,6 +186,23 @@ public class GameService {
         repository.deleteGameRoom(gameId, onSuccess, onFailure);
     }
     
+    // =========================================================================
+    // STARS / REWARDS
+    // =========================================================================
+
+    /**
+     * Winner:  +10 + floor(score/40)
+     * Loser:   -(10 - floor(score/40))  i.e. net = bonusStars - 10, min delta = -10
+     */
+    public int computeStarsDelta(int myScore, boolean iWon) {
+        int bonus = myScore / 40;
+        if (iWon) {
+            return 10 + bonus;
+        } else {
+            return bonus - 10;
+        }
+    }
+
     public List<String> calculateFeedback(List<String> guess, List<String> solution) {
         String[] result = new String[4];
         List<String> solutionPool = new ArrayList<>(solution);

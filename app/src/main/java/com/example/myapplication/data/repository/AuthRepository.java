@@ -191,4 +191,58 @@ public class AuthRepository {
     public void logout() {
         auth.signOut();
     }
+
+    public boolean isGuest() {
+        FirebaseUser u = auth.getCurrentUser();
+        return u != null && u.isAnonymous();
+    }
+
+    public void deductToken(OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null || firebaseUser.isAnonymous()) {
+            onSuccess.onSuccess(null);
+            return;
+        }
+        String uid = firebaseUser.getUid();
+        db.collection("users").document(uid).get()
+                .addOnSuccessListener(snapshot -> {
+                    long tokens = snapshot.getLong("tokens") != null ? snapshot.getLong("tokens") : 0;
+                    if (tokens <= 0) {
+                        onFailure.onFailure(new Exception("Nemaš dovoljno tokena za igranje!"));
+                        return;
+                    }
+                    db.collection("users").document(uid)
+                            .update("tokens", tokens - 1)
+                            .addOnSuccessListener(onSuccess)
+                            .addOnFailureListener(onFailure);
+                })
+                .addOnFailureListener(onFailure);
+    }
+
+    public void applyGameRewards(int starsDelta,
+                                  OnSuccessListener<Void> onSuccess,
+                                  OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null || firebaseUser.isAnonymous()) {
+            onSuccess.onSuccess(null);
+            return;
+        }
+        String uid = firebaseUser.getUid();
+        db.collection("users").document(uid).get()
+                .addOnSuccessListener(snapshot -> {
+                    long currentStars = snapshot.getLong("stars") != null ? snapshot.getLong("stars") : 0;
+                    long currentTokens = snapshot.getLong("tokens") != null ? snapshot.getLong("tokens") : 0;
+
+                    long newStars = Math.max(0, currentStars + starsDelta);
+                    long earnedTokens = newStars / 50;
+                    long remainingStars = newStars % 50;
+                    long newTokens = currentTokens + earnedTokens;
+
+                    db.collection("users").document(uid)
+                            .update("stars", remainingStars, "tokens", newTokens)
+                            .addOnSuccessListener(onSuccess)
+                            .addOnFailureListener(onFailure);
+                })
+                .addOnFailureListener(onFailure);
+    }
 }
