@@ -1,5 +1,12 @@
 <resources>
     <string name="app_name">My Application</string>
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="quiz_question_counter">Pitanje %1$d/%2$d</string>
+    <string name="quiz_timer_seconds">%1$ds</string>
+    <string name="quiz_correct_feedback">Tačno! +%1$d</string>
+    <string name="quiz_incorrect_feedback">Netačno %1$d</string>
+    <string name="quiz_timeout_feedback">Isteklo vreme… 0 bodova</string>
+    <string name="quiz_finished_counter">Ko zna zna</string>
+    <string name="quiz_finished_title">Runda završena!</string>
+    <string name="quiz_summary_template">Tvoj skor: %1$d bodova</string>
 </resources>

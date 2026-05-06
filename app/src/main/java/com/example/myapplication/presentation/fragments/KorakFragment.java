@@ -67,6 +67,7 @@ public class KorakFragment extends Fragment {
         vm         = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
         gameId     = getArguments().getString("gameId");
         myUsername = getArguments().getString("myUsername");
+        int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
 
         tvStatus          = view.findViewById(R.id.tvKorakStatus);
         tvTimer           = view.findViewById(R.id.tvKorakTimer);
@@ -76,6 +77,8 @@ public class KorakFragment extends Fragment {
         etAnswer          = view.findViewById(R.id.etAnswer);
         tilAnswer         = view.findViewById(R.id.tilAnswer);
         btnSubmitAnswer   = view.findViewById(R.id.btnSubmitAnswer);
+
+        tvStatus.setText("Korak po korak  •  Runda " + roundNumber + "/2");
 
         btnSubmitAnswer.setOnClickListener(v -> submitAnswer());
         etAnswer.setOnEditorActionListener((v, actionId, event) -> {

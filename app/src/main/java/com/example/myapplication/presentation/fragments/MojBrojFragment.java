@@ -90,6 +90,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         vm         = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
         gameId     = getArguments().getString("gameId");
         myUsername = getArguments().getString("myUsername");
+        int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
 
         tvStatus          = view.findViewById(R.id.tvMojBrojStatus);
         tvTimer           = view.findViewById(R.id.tvMojBrojTimer);
@@ -104,6 +105,8 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         btnClearExpr      = view.findViewById(R.id.btnClearExpr);
         btnSubmitExpr     = view.findViewById(R.id.btnSubmitExpr);
         tvSubmittedResult = view.findViewById(R.id.tvSubmittedResult);
+
+        tvStatus.setText("Moj broj  •  Runda " + roundNumber + "/2");
 
         btnStopTarget.setOnClickListener(v -> onStopTarget());
         btnStopNumbers.setOnClickListener(v -> onStopNumbers());

@@ -80,6 +80,7 @@ public class SkockoFragment extends Fragment {
         vm = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
         gameId     = getArguments().getString("gameId");
         myUsername = getArguments().getString("myUsername");
+        int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
 
         tvStatus          = view.findViewById(R.id.tvStatus);
         tvTimer           = view.findViewById(R.id.tvTimer);
@@ -88,6 +89,8 @@ public class SkockoFragment extends Fragment {
         scrollSymbolPicker  = view.findViewById(R.id.scrollSymbolPicker);
         tvSelectSymbols     = view.findViewById(R.id.tvSelectSymbols);
         btnConfirmGuess     = view.findViewById(R.id.btnConfirmGuess);
+
+        tvStatus.setText("Škocko  •  Runda " + roundNumber + "/2");
 
         setupSymbolPicker();
         btnConfirmGuess.setOnClickListener(v -> submitGuess());

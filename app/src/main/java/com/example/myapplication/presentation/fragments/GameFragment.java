@@ -30,6 +30,8 @@ public class GameFragment extends Fragment {
         MINIGAME_REGISTRY.put("asocijacije", AsocijacijeFragment.class);
     }
 
+    private static final int ROUNDS_PER_GAME = 2;
+
     private GameViewModel vm;
     private String gameId;
     private String myUsername;
@@ -37,6 +39,7 @@ public class GameFragment extends Fragment {
     private boolean navigatedToResults = false;
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable resultsRunnable;
+    private int roundsPlayed = 0;
 
     private FrameLayout layoutGame;
 
@@ -76,14 +79,21 @@ public class GameFragment extends Fragment {
 
             String phase = room.getRoundPhase();
             if ("MINIGAME_DONE".equals(phase)) {
-                currentMinigameType = null;
-                scheduleAdvance();
+                roundsPlayed++;
+                if (roundsPlayed >= ROUNDS_PER_GAME) {
+                    roundsPlayed = 0;
+                    currentMinigameType = null;
+                    scheduleAdvance();
+                } else {
+                    scheduleNextRound();
+                }
             } else {
                 layoutGame.setVisibility(View.VISIBLE);
 
                 String minigameType = room.getCurrentMinigameType();
                 if (minigameType != null && !minigameType.equals(currentMinigameType)) {
                     currentMinigameType = minigameType;
+                    roundsPlayed = 0;
                     loadMinigameFragment(minigameType);
                 }
             }
@@ -102,6 +112,7 @@ public class GameFragment extends Fragment {
             Bundle args = new Bundle();
             args.putString("gameId", gameId);
             args.putString("myUsername", myUsername);
+            args.putInt("roundNumber", roundsPlayed + 1);
             minigameFragment.setArguments(args);
 
             getChildFragmentManager().beginTransaction()
@@ -110,6 +121,23 @@ public class GameFragment extends Fragment {
         } catch (Exception e) {
             vm.errorMessage.postValue("Failed to load minigame: " + e.getMessage());
         }
+    }
+
+    private void scheduleNextRound() {
+        if (resultsRunnable != null) {
+            handler.removeCallbacks(resultsRunnable);
+        }
+        resultsRunnable = () -> {
+            GameRoom current = vm.gameRoom.getValue();
+            if (current != null && myUsername.equals(current.getPlayerOne())) {
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("roundPhase", "P1_TURN");
+                updates.put("playerOneRoundScore", 0);
+                updates.put("playerTwoRoundScore", 0);
+                vm.advancePhase(gameId, updates);
+            }
+        };
+        handler.postDelayed(resultsRunnable, 1500);
     }
 
     private void scheduleAdvance() {

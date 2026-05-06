@@ -12,8 +12,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication.R;
+import com.example.myapplication.presentation.viewModel.GameViewModel;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
@@ -29,6 +31,10 @@ public class SpojniceFragment extends Fragment {
     private final Map<String,String> pairs = new HashMap<>();
 
     private String pendingLeft = null;
+    private GameViewModel vm;
+    private String gameId;
+    private CountDownTimer roundTimer;
+    private boolean roundEnded = false;
 
     public SpojniceFragment() { super(R.layout.fragment_spojnice); }
 
@@ -40,10 +46,16 @@ public class SpojniceFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        TextView tvTimer = view.findViewById(R.id.tvSpojniceTimer);
-        GridLayout gridLeft = view.findViewById(R.id.gridLeft);
-        GridLayout gridRight = view.findViewById(R.id.gridRight);
+        vm = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
+        gameId = getArguments() != null ? getArguments().getString("gameId") : null;
+        int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
+
+        TextView tvTimer  = view.findViewById(R.id.tvSpojniceTimer);
         TextView tvResult = view.findViewById(R.id.tvSpojniceResult);
+        GridLayout gridLeft  = view.findViewById(R.id.gridLeft);
+        GridLayout gridRight = view.findViewById(R.id.gridRight);
+
+        tvResult.setText("Spojnice  •  Runda " + roundNumber + "/2");
 
         left.clear(); right.clear(); pairs.clear();
         left.add("Queen"); left.add("Metallica"); left.add("ABBA"); left.add("The Beatles"); left.add("Nirvana");
@@ -58,10 +70,18 @@ public class SpojniceFragment extends Fragment {
         setupColumn(gridLeft, left, true, tvResult);
         setupColumn(gridRight, right, false, tvResult);
 
-        new CountDownTimer(30000, 500) {
-            @Override public void onTick(long ms) { tvTimer.setText((ms/1000)+"s"); }
-            @Override public void onFinish() { tvTimer.setText("0s"); }
-        }.start();
+        tvTimer.setText("30s");
+        roundTimer = new CountDownTimer(30_000L, 1_000L) {
+            @Override public void onTick(long ms) { tvTimer.setText((ms / 1000) + "s"); }
+            @Override public void onFinish() { tvTimer.setText("0s"); endRound(); }
+        };
+        roundTimer.start();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (roundTimer != null) { roundTimer.cancel(); roundTimer = null; }
     }
 
     private void setupColumn(GridLayout grid, List<String> items, boolean isLeft, TextView tvResult) {
@@ -97,6 +117,17 @@ public class SpojniceFragment extends Fragment {
     private void highlight(MaterialCardView card, boolean success) {
         int color = ContextCompat.getColor(requireContext(), success ? R.color.skocko_cell_filled : R.color.skocko_absent);
         card.setCardBackgroundColor(color);
+    }
+
+    private void endRound() {
+        if (roundEnded) return;
+        roundEnded = true;
+        if (roundTimer != null) { roundTimer.cancel(); roundTimer = null; }
+        if (gameId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("roundPhase", "MINIGAME_DONE");
+            vm.advancePhase(gameId, updates);
+        }
     }
 
     private int dp(int dp) { return Math.round(dp * requireContext().getResources().getDisplayMetrics().density); }

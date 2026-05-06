@@ -8,4 +8,7 @@
     <color name="skocko_absent">#9E9E9E</color>
     <color name="skocko_cell_empty">#E0E0E0</color>
     <color name="skocko_cell_filled">#FFFFFF</color>
+
+    <color name="quiz_button_stroke">#94A3B8</color>
+    <color name="quiz_button_ripple">#BFDBFE</color>
 </resources>

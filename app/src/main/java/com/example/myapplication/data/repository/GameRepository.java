@@ -129,40 +129,14 @@ public class GameRepository {
 
     public void fetchMinigameIds(OnSuccessListener<List<String>> onSuccess,
                                  OnFailureListener onFailure) {
-        String[] categories = { "skocko", "korakPoKorak" };
-
-        // Pre-allocate slots to preserve fixed order regardless of callback arrival order
-        String[] result = new String[categories.length];
-        AtomicInteger counter = new AtomicInteger(0);
-
-        for (int i = 0; i < categories.length; i++) {
-            final int idx = i;
-            final String category = categories[idx];
-            db.collection("minigames")
-                    .document(category)
-                    .collection("items")
-                    .get()
-                    .addOnSuccessListener(snapshot -> {
-                        List<DocumentSnapshot> docs = snapshot.getDocuments();
-                        if (!docs.isEmpty()) {
-                            Collections.shuffle(docs);
-                            // Store as "category:docId" so GameFragment knows the type
-                            result[idx] = category + ":" + docs.get(0).getId();
-                        } else {
-                            // No documents — keep placeholder so minigame slot is preserved
-                            result[idx] = category + ":missing";
-                        }
-                        if (counter.incrementAndGet() == categories.length) {
-                            List<String> playlist = new ArrayList<>();
-                            for (String entry : result) {
-                                if (entry != null) playlist.add(entry);
-                            }
-                            playlist.add("mojbroj:local");
-                            onSuccess.onSuccess(playlist);
-                        }
-                    })
-                    .addOnFailureListener(onFailure);
-        }
+        List<String> playlist = new ArrayList<>();
+        playlist.add("quiz:local");
+        playlist.add("spojnice:local");
+        playlist.add("asocijacije:local");
+        playlist.add("skocko:local");
+        playlist.add("korakPoKorak:local");
+        playlist.add("mojbroj:local");
+        onSuccess.onSuccess(playlist);
     }
 
 
