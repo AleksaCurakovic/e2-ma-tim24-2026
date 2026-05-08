@@ -263,7 +263,7 @@ public class QuizFragment extends Fragment {
             dot.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.bg_quiz_progress_inactive));
         }
 
-        // AFTER
+
         GameRoom room = vm.gameRoom.getValue();
         if (gameId != null && room != null && myUsername != null
                 && myUsername.equals(room.getPlayerOne())) {

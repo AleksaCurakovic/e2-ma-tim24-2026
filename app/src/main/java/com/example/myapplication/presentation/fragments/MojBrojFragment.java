@@ -29,11 +29,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     private static final long ROUND_DURATION_MS  = 60_000;
     private static final long STOP_AUTO_DELAY_MS = 5_000;
 
-    // ── Phases this minigame uses ──
-    // P1_TURN = round 1 (P1 is owner, both play simultaneously)
-    // P2_TURN = round 2 (P2 is owner, both play simultaneously)
-    // SHOWING_RESULTS = between rounds (silent advance)
-
     private GameViewModel vm;
     private String gameId;
     private String myUsername;
@@ -55,23 +50,19 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     private final StringBuilder expression       = new StringBuilder();
     private final List<Integer>  usedNumberIndices = new ArrayList<>();
 
-    // Round state
     private String  activePhase      = null;
     private String  lastStartedPhase = null;
-    private boolean isRoundOwner     = false;   // true if this player generates the numbers
+    private boolean isRoundOwner     = false;
     private boolean targetRevealed   = false;
     private boolean numbersRevealed  = false;
     private boolean submitted        = false;
     private boolean scoringDone      = false;
     private int     targetNumber     = 0;
     private List<Integer> availableNumbers = new ArrayList<>();
-
-    // Timers / handlers
     private CountDownTimer roundTimer;
     private CountDownTimer stopAutoTimer;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    // Shake sensor
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private static final float SHAKE_THRESHOLD = 12f;
@@ -81,9 +72,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         super(R.layout.fragment_moj_broj);
     }
 
-    // =========================================================================
-    // LIFECYCLE
-    // =========================================================================
 
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -127,7 +115,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
             if (phase != null) onPhaseChanged(phase);
         });
 
-        // Single observer for all incoming Firestore room data
         vm.gameRoom.observe(getViewLifecycleOwner(), this::onRoomUpdated);
     }
 
@@ -152,10 +139,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         cancelStopAutoTimer();
     }
 
-    // =========================================================================
-    // SENSOR (SHAKE)
-    // =========================================================================
-
     @Override
     public void onSensorChanged(SensorEvent event) {
         float x = event.values[0], y = event.values[1], z = event.values[2];
@@ -173,9 +156,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
-    // =========================================================================
-    // PHASE HANDLING
-    // =========================================================================
 
     private void onPhaseChanged(String phase) {
         GameRoom room = vm.gameRoom.getValue();
@@ -183,7 +163,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         if (!"mojbroj".equals(room.getCurrentMinigameType())) return;
 
         if (!isPlayablePhase(phase)) {
-            // MINIGAME_DONE or unknown — reset guard and go idle
             lastStartedPhase = null;
             showWaiting(phase.equals("MINIGAME_DONE") ? "Kraj runde!" : "Čekaj...");
             cancelRoundTimer();
@@ -201,9 +180,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         return phase.equals("P1_TURN") || phase.equals("P2_TURN");
     }
 
-    // =========================================================================
-    // ROUND START — both players enter simultaneously
-    // =========================================================================
 
     private void startRound(GameRoom room, String phase) {
         activePhase     = phase;
@@ -216,12 +192,12 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         expression.setLength(0);
         targetNumber    = 0;
 
-        // Determine if this player is the round owner (generates numbers)
+
         isRoundOwner = phase.equals("P1_TURN")
                 ? myUsername.equals(room.getPlayerOne())
                 : myUsername.equals(room.getPlayerTwo());
 
-        // Reset UI
+
         tvTarget.setVisibility(View.GONE);
         tvTarget.setText("---");
         btnStopNumbers.setVisibility(View.GONE);
@@ -240,9 +216,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         }
     }
 
-    // =========================================================================
-    // STOP LOGIC — target reveal
-    // =========================================================================
+
 
     private void onStopTarget() {
         if (targetRevealed || !isRoundOwner) return;
@@ -259,11 +233,11 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         scheduleAutoStopNumbers();
     }
 
-    // Called by single vm.gameRoom observer — handles all incoming sync for non-owner
+
     private void onRoomUpdated(GameRoom room) {
         if (room == null || activePhase == null) return;
 
-        // ── Deliver target to non-owner (no STOP needed, arrives automatically) ──
+
         if (!isRoundOwner && targetNumber == 0) {
             Object t = room.getMojBrojTarget();
             if (t != null) {
@@ -273,7 +247,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
             }
         }
 
-        // ── Deliver numbers to non-owner ──
+
         if (!isRoundOwner && targetNumber != 0 && !numbersRevealed) {
             Object nums = room.getMojBrojNumbers();
             if (nums != null) {
@@ -286,7 +260,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
             }
         }
 
-        // ── Detect both submitted — only round owner scores, only for the active phase ──
+
         if (submitted && isRoundOwner && !scoringDone
                 && activePhase != null && activePhase.equals(room.getRoundPhase())) {
             Boolean p1Done = room.getMojBrojP1Submitted();
@@ -304,9 +278,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         tvTarget.setVisibility(View.VISIBLE);
     }
 
-    // =========================================================================
-    // STOP LOGIC — numbers reveal
-    // =========================================================================
+
 
     private void onStopNumbers() {
         if (numbersRevealed || !isRoundOwner) return;
@@ -321,7 +293,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     }
 
     private void showNumbers() {
-        // Clickable number buttons
         layoutNumButtons.removeAllViews();
         for (int i = 0; i < availableNumbers.size(); i++) {
             final int idx = i;
@@ -348,7 +319,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
 
     private void onNumberButtonClicked(MaterialButton btn, int idx) {
         if (usedNumberIndices.contains(idx)) return;
-        // Prevent two numbers adjacent without an operator
         if (expression.length() > 0 && Character.isDigit(expression.charAt(expression.length() - 1))) return;
         usedNumberIndices.add(idx);
         btn.setEnabled(false);
@@ -373,7 +343,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     }
 
     private void recomputeUsedButtons() {
-        // Extract all complete numbers currently in the expression
         List<Integer> inUse = new ArrayList<>();
         String cur = expression.toString();
         StringBuilder num = new StringBuilder();
@@ -389,7 +358,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         }
         if (num.length() > 0) inUse.add(Integer.parseInt(num.toString()));
 
-        // Rebuild usedNumberIndices and sync button states
+
         usedNumberIndices.clear();
         List<Integer> pool = new ArrayList<>(availableNumbers);
         for (int n : inUse) {
@@ -420,9 +389,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         }
     }
 
-    // =========================================================================
-    // AUTO-STOP TIMERS
-    // =========================================================================
+
 
     private void scheduleAutoStopTarget() {
         cancelStopAutoTimer();
@@ -444,9 +411,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         if (stopAutoTimer != null) { stopAutoTimer.cancel(); stopAutoTimer = null; }
     }
 
-    // =========================================================================
-    // ROUND TIMER (60s)
-    // =========================================================================
+
 
     private void startRoundTimer() {
         cancelRoundTimer();
@@ -467,9 +432,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         if (roundTimer != null) { roundTimer.cancel(); roundTimer = null; }
     }
 
-    // =========================================================================
-    // EXPRESSION SUBMISSION
-    // =========================================================================
 
     private void submitExpression() {
         if (submitted) return;
@@ -510,11 +472,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
                 room.getPlayerOneScore(), room.getPlayerTwoScore());
     }
 
-    // =========================================================================
-    // EXPRESSION EVALUATOR
-    // =========================================================================
-
-    /** Simple recursive descent evaluator supporting +, -, *, /, (, ) */
     private double evaluate(String expr) {
         expr = expr.replaceAll("\\s+", "");
         return parseExpr(new int[]{0}, expr);
@@ -554,9 +511,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         return Double.parseDouble(s.substring(start, pos[0]));
     }
 
-    // =========================================================================
-    // UI HELPERS
-    // =========================================================================
+
 
     private void showWaiting(String message) {
         tvStatus.setText(message);

@@ -26,6 +26,7 @@ import com.example.myapplication.data.repository.AuthRepository;
 import com.example.myapplication.presentation.viewModel.HomeViewModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import androidx.navigation.NavOptions;
 
 public class HomeActivity extends AppCompatActivity {
     private boolean isRegistered;
@@ -59,7 +60,6 @@ public class HomeActivity extends AppCompatActivity {
                 menu.getGlobalVisibleRect(menuRect);
                 btn.getGlobalVisibleRect(btnRect);
 
-                // If touch is NOT on menu AND NOT on the button, close the menu
                 if (!menuRect.contains((int)event.getRawX(), (int)event.getRawY()) &&
                         !btnRect.contains((int)event.getRawX(), (int)event.getRawY())) {
 
@@ -75,20 +75,27 @@ public class HomeActivity extends AppCompatActivity {
         TextView tvStars = findViewById(R.id.tvStars);
         TextView tvTokens = findViewById(R.id.tvTokens);
         dropdownMenu = findViewById(R.id.dropdownMenu);
+        View wrapperStars = findViewById(R.id.wrapperStars);
+        View wrapperTokens = findViewById(R.id.wrapperTokens);
 
         btnMenu.setOnClickListener(v -> toggleDropdown());
+        
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         homeViewModel.loadUser();
 
-        if (!isRegistered)
+        if (!isRegistered) {
+            ivLeagueIcon.setVisibility(View.GONE);
+            btnMenu.setVisibility(View.GONE);
+            if (wrapperStars != null) wrapperStars.setVisibility(View.GONE);
+            if (wrapperTokens != null) wrapperTokens.setVisibility(View.GONE);
             return;
+        }
+
 
         homeViewModel.currentUser.observe(this, user -> {
             if (user != null) {
                 tvStars.setText(String.valueOf(user.getStars()));
                 tvTokens.setText(String.valueOf(user.getTokens()));
-
-                // Resolve league icon from local drawables
                 int resId = getResources().getIdentifier(
                         user.getLeagueIcon(), "drawable", getPackageName()
                 );
@@ -112,8 +119,29 @@ public class HomeActivity extends AppCompatActivity {
         NavController navController = navHostFragment.getNavController();
 
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
-        NavigationUI.setupWithNavController(bottomNav, navController);
         bottomNav.setItemIconTintList(null);
+
+
+        if (!isRegistered) {
+            bottomNav.getMenu().findItem(R.id.homeFragment).setVisible(false);
+            bottomNav.getMenu().findItem(R.id.friendsFragment).setVisible(false);
+            bottomNav.getMenu().findItem(R.id.notificationsFragment).setVisible(false);
+        }
+
+
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.homeFragment) {
+                NavOptions navOptions = new NavOptions.Builder()
+                        .setPopUpTo(R.id.homeFragment, false)
+                        .setLaunchSingleTop(true)
+                        .build();
+                navController.navigate(R.id.homeFragment, null, navOptions);
+                return true;
+            }
+
+            return NavigationUI.onNavDestinationSelected(item, navController);
+        });
 
         View header = findViewById(R.id.header);
         View bottomNavContainer = findViewById(R.id.bottomNavContainer);
@@ -131,27 +159,21 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupDropdownMenu() {
-        View dropdownMenu = findViewById(R.id.dropdownMenu);
-        ImageButton btnMenu = findViewById(R.id.btnMenu);
-
-        // Toggle menu when clicking the hamburger button
-        btnMenu.setOnClickListener(v -> {
-            if (dropdownMenu.getVisibility() == View.VISIBLE) {
-                dropdownMenu.setVisibility(View.GONE);
-            } else {
-                dropdownMenu.setVisibility(View.VISIBLE);
-                // Ensure it's on top of fragments
-                dropdownMenu.bringToFront();
-            }
-        });
-
-        // Menu Item Click Listeners
         findViewById(R.id.menuProfile).setOnClickListener(v -> {
             closeDropdown();
-            NavHostFragment host = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.homeNavHost);
-            if (host != null) {
-                NavController c = host.getNavController();
-                c.navigate(R.id.profileFragment);
+
+            NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
+                    .findFragmentById(R.id.homeNavHost);
+
+            if (navHostFragment != null) {
+                NavController navController = navHostFragment.getNavController();
+
+                NavOptions navOptions = new NavOptions.Builder()
+                        .setPopUpTo(R.id.homeFragment, false)
+                        .setLaunchSingleTop(true)
+                        .build();
+
+                navController.navigate(R.id.profileFragment, null, navOptions);
             }
         });
 
@@ -165,7 +187,8 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void closeDropdown() {
-        findViewById(R.id.dropdownMenu).setVisibility(View.GONE);
+        dropdownMenu.setVisibility(View.GONE);
+        isMenuOpen = false;
     }
 
 }

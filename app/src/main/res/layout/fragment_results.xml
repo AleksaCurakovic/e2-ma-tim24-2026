@@ -11,7 +11,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🎮 Game Over"
+        android:text="Gotova partija"
         android:textSize="32sp"
         android:textStyle="bold"
         android:textColor="@android:color/white"
@@ -103,7 +103,7 @@
         android:id="@+id/btnBackToHome"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Back to Home"
+        android:text="Povratak"
         android:textSize="16sp"/>
 
 </LinearLayout>

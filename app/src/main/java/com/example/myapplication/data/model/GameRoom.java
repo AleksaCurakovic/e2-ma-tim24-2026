@@ -9,25 +9,24 @@ public class GameRoom {
     private String gameId;
     private String playerOne;
     private String playerTwo;
-    private String gameState; // "PLAYING", "FINISHED"
+    private String gameState;
     private long createdAt;
     private List<String> minigamePlaylist;
     private int currentMinigameIndex;
     private int playerOneScore;
     private int playerTwoScore;
 
-    private String roundPhase; // "P1_TURN", "P2_BONUS", "P2_TURN", "P1_BONUS", "SHOWING_RESULTS"
+    private String roundPhase;
     private int playerOneRoundScore;
     private int playerTwoRoundScore;
     private int roundNumber;
 
-    private String currentMinigameType; // "skocko", "memory", "quiz", etc.
+    private String currentMinigameType;
 
-    // Each entry: { "guess": ["skocko","srce",...], "feedback": ["CORRECT","ABSENT",...] }
     private List<Map<String, Object>> p1GuessHistory = new ArrayList<>();
     private List<Map<String, Object>> p2GuessHistory = new ArrayList<>();
 
-    // Moj Broj per-round fields
+
     private Object mojBrojTarget;
     private List<Object> mojBrojNumbers;
     private int    mojBrojP1Result;

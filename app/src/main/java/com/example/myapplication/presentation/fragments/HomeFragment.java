@@ -45,19 +45,17 @@ public class HomeFragment extends Fragment {
         TextView tvWelcome = view.findViewById(R.id.tvWelcome);
         MaterialButton btnPlay = view.findViewById(R.id.btnPlay);
 
-        // Show username in welcome text
         homeViewModel.currentUser.observe(getViewLifecycleOwner(), user -> {
             if (user != null) {
-                tvWelcome.setText("Welcome, " + user.getUsername() + "!");
+                tvWelcome.setText("Dobro došli, " + user.getUsername() + "!");
             }
         });
 
-        // Play button click
         btnPlay.setOnClickListener(v -> {
             User user = homeViewModel.currentUser.getValue();
             if (user == null) {
                 Toast.makeText(requireContext(),
-                        "Loading user data, please wait",
+                        "Ucitavamo korisnika, molimo cekajte",
                         Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -75,13 +73,11 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // Show loading state on button
         gameViewModel.isLoading.observe(getViewLifecycleOwner(), loading -> {
             btnPlay.setEnabled(!loading);
-            btnPlay.setText(loading ? "Finding opponent..." : "▶  PLAY");
+            btnPlay.setText(loading ? "Trazimo protivnika..." : "▶  PLAY");
         });
 
-        // Navigate when game is found
         gameViewModel.navigateToGame.observe(getViewLifecycleOwner(), gameId -> {
             if (gameId != null) {
                 Bundle b = new Bundle();
@@ -94,7 +90,6 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // Show errors
         gameViewModel.errorMessage.observe(getViewLifecycleOwner(), msg -> {
             if (msg != null) {
                 Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show();

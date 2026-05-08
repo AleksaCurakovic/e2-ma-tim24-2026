@@ -17,12 +17,12 @@ public class AuthViewModel extends ViewModel {
 
     public void register(String email, String username, String region, String password, String repeatPassword) {
         if (!password.equals(repeatPassword)) {
-            errorMessage.setValue("Passwords do not match");
+            errorMessage.setValue("Sifre nisu iste");
             return;
         }
 
         if (email.isEmpty() || username.isEmpty() || region.isEmpty() || password.isEmpty()) {
-            errorMessage.setValue("Please fill in all fields");
+            errorMessage.setValue("Popunite sva polja");
             return;
         }
 
@@ -40,7 +40,7 @@ public class AuthViewModel extends ViewModel {
 
     public void login(String emailOrUsername, String password) {
         if (emailOrUsername.isEmpty() || password.isEmpty()) {
-            errorMessage.setValue("Please fill in all fields");
+            errorMessage.setValue("Popunite sva polja");
             return;
         }
         isLoading.setValue(true);

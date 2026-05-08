@@ -77,7 +77,6 @@ public class AsocijacijeFragment extends Fragment {
         if (roundTimer != null) { roundTimer.cancel(); roundTimer = null; }
     }
 
-    // AFTER
     private void endRound() {
         if (roundEnded) return;
         roundEnded = true;

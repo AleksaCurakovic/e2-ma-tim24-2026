@@ -72,7 +72,6 @@ public class LoginFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // Clear LiveData state so it doesn't bleed into other fragments
         viewModel.errorMessage.setValue(null);
         viewModel.loginSuccess.setValue(null);
         viewModel.registerSuccess.setValue(null);

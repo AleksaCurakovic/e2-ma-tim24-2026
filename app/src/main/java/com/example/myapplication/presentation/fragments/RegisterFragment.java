@@ -49,7 +49,7 @@ public class RegisterFragment extends Fragment {
             SerbiaMapDialog mapDialog = new SerbiaMapDialog();
             mapDialog.setOnRegionConfirmedListener(region -> {
                 selectedRegion = region;
-                tvSelectedRegion.setText("Selected: " + region);
+                tvSelectedRegion.setText("Izabrano: " + region);
             });
             mapDialog.show(getParentFragmentManager(), "SerbiaMapDialog");
         });
@@ -59,7 +59,6 @@ public class RegisterFragment extends Fragment {
             String username = etUsername.getText().toString().trim();
             String password = etPassword.getText().toString();
             String repeatPassword = etRepeatPassword.getText().toString();
-            String selectedRegion = tvSelectedRegion.getText().toString();
 
 
             viewModel.register(email, username, selectedRegion, password, repeatPassword);
@@ -74,7 +73,7 @@ public class RegisterFragment extends Fragment {
         viewModel.registerSuccess.observe(getViewLifecycleOwner(), success -> {
             if (Boolean.TRUE.equals(success)) {
                 Toast.makeText(requireContext(),
-                        "Registration successful! Please check your email to verify your account.",
+                        "Registracija uspesna, proverite email za verifikaciju.",
                         Toast.LENGTH_LONG).show();
                 Navigation.findNavController(view).navigate(R.id.action_register_to_login);
             }
@@ -88,7 +87,6 @@ public class RegisterFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // Clear LiveData state so it doesn't bleed into other fragments
         viewModel.errorMessage.setValue(null);
         viewModel.loginSuccess.setValue(null);
         viewModel.registerSuccess.setValue(null);

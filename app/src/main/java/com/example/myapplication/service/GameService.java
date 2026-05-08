@@ -64,9 +64,6 @@ public class GameService {
         }, onFailure);
     }
 
-    // =========================================================================
-    // SKOCKO
-    // =========================================================================
 
     public void fetchSkockoSolution(String docId, String solutionField,
                                     OnSuccessListener<List<String>> onSuccess,
@@ -74,9 +71,6 @@ public class GameService {
         repository.fetchSkockoSolution(docId, solutionField, onSuccess, onFailure);
     }
 
-    // =========================================================================
-    // MOJ BROJ
-    // =========================================================================
 
     public int generateTarget() {
         return new java.util.Random().nextInt(900) + 100;
@@ -159,14 +153,10 @@ public class GameService {
         updates.put("mojBrojP2Result",     0);
         updates.put("mojBrojP1Submitted",  false);
         updates.put("mojBrojP2Submitted",  false);
-        // After P1's round → start P2's round; after P2's round → minigame is fully done
         updates.put("roundPhase", p1IsRoundOwner ? "P2_TURN" : "MINIGAME_DONE");
         return updates;
     }
 
-    // =========================================================================
-    // KORAK PO KORAK
-    // =========================================================================
 
     public void fetchKorakSolution(String docId, String playerPrefix,
                                    OnSuccessListener<Map<String, Object>> onSuccess,
@@ -186,14 +176,7 @@ public class GameService {
         repository.deleteGameRoom(gameId, onSuccess, onFailure);
     }
     
-    // =========================================================================
-    // STARS / REWARDS
-    // =========================================================================
 
-    /**
-     * Winner:  +10 + floor(score/40)
-     * Loser:   -(10 - floor(score/40))  i.e. net = bonusStars - 10, min delta = -10
-     */
     public int computeStarsDelta(int myScore, boolean iWon) {
         int bonus = myScore / 40;
         if (iWon) {
@@ -207,7 +190,7 @@ public class GameService {
         String[] result = new String[4];
         List<String> solutionPool = new ArrayList<>(solution);
 
-        // First pass — mark correct positions
+
         for (int i = 0; i < 4; i++) {
             if (guess.get(i).equals(solution.get(i))) {
                 result[i] = "CORRECT";
@@ -215,7 +198,7 @@ public class GameService {
             }
         }
 
-        // Second pass — mark present/absent
+
         for (int i = 0; i < 4; i++) {
             if (result[i] != null) continue;
             int poolIdx = solutionPool.indexOf(guess.get(i));

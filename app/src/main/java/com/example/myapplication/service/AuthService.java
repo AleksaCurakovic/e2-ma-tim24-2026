@@ -48,4 +48,9 @@ public class AuthService {
                                   OnFailureListener onFailure) {
         repository.applyGameRewards(starsDelta, onSuccess, onFailure);
     }
+
+    public void changePassword(String oldPassword, String newPassword,
+                               OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        repository.changePassword(oldPassword, newPassword, onSuccess, onFailure);
+    }
 }

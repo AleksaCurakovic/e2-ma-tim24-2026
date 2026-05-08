@@ -71,9 +71,6 @@ public class SkockoFragment extends Fragment {
         super(R.layout.fragment_skocko);
     }
 
-    // =========================================================================
-    // LIFECYCLE
-    // =========================================================================
 
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -106,9 +103,7 @@ public class SkockoFragment extends Fragment {
         cancelTimer();
     }
 
-    // =========================================================================
-    // PHASE HANDLING
-    // =========================================================================
+
 
     private void onPhaseChanged(String phase) {
         GameRoom room = vm.gameRoom.getValue();
@@ -120,7 +115,6 @@ public class SkockoFragment extends Fragment {
         isMyTurn    = isActivePlayer(phase, room);
 
         if (!isMyTurn) {
-            // Reset guard so this player's next active turn always starts fresh
             lastStartedPhase = null;
             cancelTimer();
             if (phase.equals("MINIGAME_DONE")) {
@@ -155,16 +149,13 @@ public class SkockoFragment extends Fragment {
         scrollSymbolPicker.setVisibility(View.GONE);
         layoutSymbolPicker.setVisibility(View.GONE);
         btnConfirmGuess.setVisibility(View.GONE);
-        // Clear the grid so previous attempt doesn't remain on screen
         gridGuesses.removeAllViews();
         currentGuess.clear();
         localGuessHistory.clear();
         currentRow = 0;
     }
 
-    // =========================================================================
-    // TURN START
-    // =========================================================================
+
 
     private void loadSolutionThenStart(GameRoom room) {
         tvStatus.setText("Učitavanje...");
@@ -181,14 +172,6 @@ public class SkockoFragment extends Fragment {
         );
     }
 
-    /**
-     * Main turns: each player guesses their own solution.
-     *   P1_TURN  → p1Solution (P1 guesses their own)
-     *   P2_TURN  → p2Solution (P2 guesses their own)
-     * Bonus turns: the bonus player guesses the OTHER player's solution.
-     *   P2_BONUS → p1Solution (P2 tries to steal by guessing P1's solution)
-     *   P1_BONUS → p2Solution (P1 tries to steal by guessing P2's solution)
-     */
     private String solutionFieldForPhase(String phase) {
         switch (phase) {
             case "P1_TURN":  return "p1Solution";
@@ -233,9 +216,6 @@ public class SkockoFragment extends Fragment {
         startTimer(duration);
     }
 
-    // =========================================================================
-    // GUESS FLOW
-    // =========================================================================
 
     private void addSymbolToGuess(String symbol) {
         if (!isMyTurn || turnFinished) return;
@@ -278,9 +258,6 @@ public class SkockoFragment extends Fragment {
         return true;
     }
 
-    // =========================================================================
-    // FIRESTORE WRITE (only active player)
-    // =========================================================================
 
     private void commitTurnToFirestore(boolean solved) {
         GameRoom room = vm.gameRoom.getValue();
@@ -344,11 +321,7 @@ public class SkockoFragment extends Fragment {
         localGuessHistory.clear();
     }
 
-    /**
-     * Renders the opponent's failed attempts into the grid before the bonus player starts.
-     * P2_BONUS sees P1's history (p1GuessHistory), P1_BONUS sees P2's history (p2GuessHistory).
-     */
-    @SuppressWarnings("unchecked")
+
     private void renderOpponentHistory(GameRoom room) {
         if (room == null) return;
 
@@ -376,9 +349,6 @@ public class SkockoFragment extends Fragment {
         currentRow = history.size();
     }
 
-    // =========================================================================
-    // TIMER
-    // =========================================================================
 
     private void startTimer(long durationMs) {
         cancelTimer();
@@ -406,9 +376,7 @@ public class SkockoFragment extends Fragment {
         }
     }
 
-    // =========================================================================
-    // UI HELPERS
-    // =========================================================================
+
 
     private void setupGuessGrid() {
         gridGuesses.removeAllViews();

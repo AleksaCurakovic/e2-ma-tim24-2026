@@ -58,9 +58,7 @@ public class KorakFragment extends Fragment {
         super(R.layout.fragment_korak);
     }
 
-    // =========================================================================
-    // LIFECYCLE
-    // =========================================================================
+
 
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -101,9 +99,7 @@ public class KorakFragment extends Fragment {
         cancelTimer();
     }
 
-    // =========================================================================
-    // PHASE HANDLING
-    // =========================================================================
+
 
     private void onPhaseChanged(String phase) {
         GameRoom room = vm.gameRoom.getValue();
@@ -149,9 +145,7 @@ public class KorakFragment extends Fragment {
         revealedSteps = 0;
     }
 
-    // =========================================================================
-    // TURN START
-    // =========================================================================
+
 
     private void loadDataThenStart(GameRoom room, String phase) {
         tvStatus.setText("Učitavanje...");
@@ -195,26 +189,24 @@ public class KorakFragment extends Fragment {
         layoutSteps.removeAllViews();
 
         if (isBonusMode) {
-            // Show all steps the opponent already revealed, then one input row
+
             tvStatus.setText("Bonus! Pogodi za 5 bodova!");
             revealAllSteps();
             tvTimer.setVisibility(View.VISIBLE);
             layoutAnswerInput.setVisibility(View.VISIBLE);
             btnSubmitAnswer.setEnabled(true);
-            startTimer(STEP_INTERVAL_MS); // 10s for bonus
+            startTimer(STEP_INTERVAL_MS);
         } else {
             tvStatus.setText("Tvoj red!");
-            revealStep(); // reveal first step immediately
+            revealStep();
             tvTimer.setVisibility(View.VISIBLE);
             layoutAnswerInput.setVisibility(View.VISIBLE);
             btnSubmitAnswer.setEnabled(true);
-            startTimer(ROUND_DURATION_MS); // 70s continuous timer
+            startTimer(ROUND_DURATION_MS);
         }
     }
 
-    // =========================================================================
-    // STEP REVEAL
-    // =========================================================================
+
 
     private void revealStep() {
         if (revealedSteps >= TOTAL_STEPS) return;
@@ -264,9 +256,6 @@ public class KorakFragment extends Fragment {
         layoutSteps.addView(card);
     }
 
-    // =========================================================================
-    // ANSWER SUBMISSION
-    // =========================================================================
 
     private void submitAnswer() {
         if (turnFinished) return;
@@ -285,9 +274,7 @@ public class KorakFragment extends Fragment {
         }
     }
 
-    // =========================================================================
-    // FIRESTORE WRITE
-    // =========================================================================
+
 
     private void commitTurnToFirestore(boolean solved) {
         GameRoom room = vm.gameRoom.getValue();
@@ -322,11 +309,6 @@ public class KorakFragment extends Fragment {
         vm.advancePhase(gameId, updates);
     }
 
-    /**
-     * Step 1 (revealedSteps=1 when answered) → 20pts
-     * Each additional step costs 2pts: step N → 20 - (N-1)*2
-     * Step 7 → 8pts. Bonus → always 5pts.
-     */
     private int scoreForTurn(boolean solved) {
         if (!solved) return 0;
         if (isBonusMode) return 5;
@@ -344,10 +326,6 @@ public class KorakFragment extends Fragment {
         }
     }
 
-    // =========================================================================
-    // TIMER
-    // =========================================================================
-
     private void startTimer(long durationMs) {
         cancelTimer();
         turnTimer = new CountDownTimer(durationMs, 500) {
@@ -356,7 +334,6 @@ public class KorakFragment extends Fragment {
                 tvTimer.setText((ms / 1000) + "s");
 
                 if (!isBonusMode) {
-                    // Reveal a new step every 10s: at 60s, 50s, 40s, 30s, 20s, 10s
                     int elapsedSec = (int) ((ROUND_DURATION_MS - ms) / 1000);
                     int expectedRevealed = Math.min(elapsedSec / 10 + 1, TOTAL_STEPS);
                     while (revealedSteps < expectedRevealed) {
@@ -384,9 +361,7 @@ public class KorakFragment extends Fragment {
         }
     }
 
-    // =========================================================================
-    // HELPERS
-    // =========================================================================
+
 
     private int dp(int dp) {
         float density = requireContext().getResources().getDisplayMetrics().density;

@@ -24,20 +24,15 @@ public class GameRepository {
     private static final String COL_ROOMS    = "gameRooms";
     private final FirebaseFirestore db;
 
-    // Matchmaking listeners
     private ListenerRegistration gameRequestListener;
     private ListenerRegistration gameRoomListener;
 
-    // In-game listener
     private ListenerRegistration roundStateListener;
 
     public GameRepository() {
         db = FirebaseFirestore.getInstance();
     }
 
-    // =========================================================================
-    // MATCHMAKING
-    // =========================================================================
 
     public void findOrPostRequest(String username,
                                   OnSuccessListener<PathResult> onSuccess,
@@ -107,7 +102,6 @@ public class GameRepository {
     public void listenToGameRoom(String gameId,
                                  OnSuccessListener<GameRoom> onUpdate,
                                  OnFailureListener onFailure) {
-        // Always clean up previous listener first to avoid duplicates
         if (gameRoomListener != null) {
             gameRoomListener.remove();
         }
@@ -123,9 +117,6 @@ public class GameRepository {
                 });
     }
 
-    // =========================================================================
-    // MINIGAME DATA
-    // =========================================================================
 
     public void fetchMinigameIds(OnSuccessListener<List<String>> onSuccess,
                                  OnFailureListener onFailure) {
@@ -147,7 +138,6 @@ public class GameRepository {
                                OnFailureListener onFailure) {
         GameRoom room = new GameRoom(gameId, playerOne, playerTwo, playlist);
 
-        // Set the first minigame type from playlist (format: "type:docId")
         if (playlist != null && !playlist.isEmpty()) {
             String first = playlist.get(0);
             room.setCurrentMinigameType(first.contains(":") ? first.split(":")[0] : first);
@@ -174,10 +164,10 @@ public class GameRepository {
                         if (solution != null && solution.size() == 4) {
                             onSuccess.onSuccess(solution);
                         } else {
-                            onFailure.onFailure(new Exception("Invalid solution data for field: " + solutionField));
+                            onFailure.onFailure(new Exception("Nepravilan format resenja" + solutionField));
                         }
                     } else {
-                        onFailure.onFailure(new Exception("Solution not found"));
+                        onFailure.onFailure(new Exception("Rešenje nije pronađeno"));
                     }
                 })
                 .addOnFailureListener(onFailure);
@@ -201,10 +191,10 @@ public class GameRepository {
                             data.put("steps", steps);
                             onSuccess.onSuccess(data);
                         } else {
-                            onFailure.onFailure(new Exception("Invalid korak data for: " + playerPrefix));
+                            onFailure.onFailure(new Exception("Neis" + playerPrefix));
                         }
                     } else {
-                        onFailure.onFailure(new Exception("Korak document not found"));
+                        onFailure.onFailure(new Exception("Korak document nije nadjen"));
                     }
                 })
                 .addOnFailureListener(onFailure);
@@ -228,9 +218,7 @@ public class GameRepository {
                 .addOnFailureListener(onFailure);
     }
 
-    // =========================================================================
-    // CLEANUP
-    // =========================================================================
+
 
     public void deleteGameRequest(String documentId,
                                   OnSuccessListener<Void> onSuccess,
@@ -241,24 +229,18 @@ public class GameRepository {
                 .addOnFailureListener(onFailure);
     }
 
-    /** Only detach matchmaking listeners — keeps the game room listener alive */
     public void detachMatchmakingListeners() {
         if (gameRequestListener != null) {
             gameRequestListener.remove();
             gameRequestListener = null;
         }
     }
-
-    /** Detach everything — call only from ViewModel.onCleared() */
     public void detachListeners() {
         if (gameRequestListener != null) { gameRequestListener.remove(); gameRequestListener = null; }
         if (gameRoomListener    != null) { gameRoomListener.remove();    gameRoomListener    = null; }
         if (roundStateListener  != null) { roundStateListener.remove();  roundStateListener  = null; }
     }
 
-    // =========================================================================
-    // PATH RESULT
-    // =========================================================================
 
     public static class PathResult {
         public enum Type { JOINED, WAITING }

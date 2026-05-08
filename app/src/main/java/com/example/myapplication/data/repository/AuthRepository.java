@@ -22,25 +22,20 @@ public class AuthRepository {
         db = FirebaseFirestore.getInstance();
     }
 
-    // --- REGISTER ---
     public void register(String email, String username, String region, String password,
                          OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
 
-        // Step 1: Check username uniqueness first
+
         db.collection("users")
                 .whereEqualTo("username", username)
                 .get()
                 .addOnSuccessListener(query -> {
-                    // Step 2: Create the Firebase Auth account
+
                     auth.createUserWithEmailAndPassword(email, password)
                             .addOnSuccessListener(authResult -> {
                                 FirebaseUser firebaseUser = authResult.getUser();
                                 String uid = firebaseUser.getUid();
-
-                                // Step 3: Send verification email
                                 firebaseUser.sendEmailVerification();
-
-                                // Step 4: Save user profile to Firestore
                                 User user = new User(uid, username, email, region);
                                 db.collection("users").document(uid)
                                         .set(user)
@@ -66,16 +61,12 @@ public class AuthRepository {
                 .addOnFailureListener(onFailure);
     }
 
-    // --- LOGIN ---
-    // Accepts either email or username
+
     public void login(String emailOrUsername, String password,
                       OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
-
-        // Detect if input looks like an email
         if (emailOrUsername.contains("@")) {
             signInWithEmail(emailOrUsername, password, onSuccess, onFailure);
         } else {
-            // Look up email by username in Firestore first
             db.collection("users")
                     .whereEqualTo("username", emailOrUsername)
                     .get()
@@ -98,7 +89,7 @@ public class AuthRepository {
                     FirebaseUser user = authResult.getUser();
                     if (user != null && !user.isEmailVerified()) {
                         auth.signOut();
-                        onFailure.onFailure(new Exception("Please verify your email before logging in."));
+                        onFailure.onFailure(new Exception("Molim vas da potvrdite email adresu pre nego što se ulogujete."));
                     } else {
                         checkAndAwardDailyReward(user.getUid(), onSuccess, onFailure);
                     }
@@ -111,7 +102,6 @@ public class AuthRepository {
                     FirebaseUser firebaseUser = authResult.getUser();
                     String uid = firebaseUser.getUid();
 
-                    // Use first 8 chars of Firebase uid as guest name
                     String guestName = "Guest_" + uid.substring(0, 8);
 
                     User guestUser = new User();
@@ -123,7 +113,7 @@ public class AuthRepository {
                             .addOnFailureListener(onFailure);
                 })
                 .addOnFailureListener(e ->
-                        onFailure.onFailure(new Exception("Could not continue as guest: " + e.getMessage()))
+                        onFailure.onFailure(new Exception("Nemoguce da se ulogujete kao gost: " + e.getMessage()))
                 );
     }
 
@@ -141,16 +131,13 @@ public class AuthRepository {
                     long now = System.currentTimeMillis();
                     Long lastLogin = snapshot.getLong("lastLoginTime");
 
-                    // Check if 24 hours have passed since last login
                     boolean shouldAward = lastLogin == null ||
                             (now - lastLogin) >= 24 * 60 * 60 * 1000L;
 
                     if (shouldAward) {
-                        // Get current tokens and increment by 5
                         Long currentTokens = snapshot.getLong("tokens");
                         long newTokens = (currentTokens != null ? currentTokens : 0) + 5;
 
-                        // Update tokens and lastLoginTime in one call
                         db.collection("users").document(uid)
                                 .update(
                                         "tokens", newTokens,
@@ -159,7 +146,6 @@ public class AuthRepository {
                                 .addOnSuccessListener(onSuccess)
                                 .addOnFailureListener(onFailure);
                     } else {
-                        // No reward but still update lastLoginTime
                         db.collection("users").document(uid)
                                 .update("lastLoginTime", now)
                                 .addOnSuccessListener(onSuccess)
@@ -172,7 +158,7 @@ public class AuthRepository {
     public void loadUser(OnSuccessListener<User> onSuccess, OnFailureListener onFailure) {
         FirebaseUser firebaseUser = auth.getCurrentUser();
         if (firebaseUser == null) {
-            onFailure.onFailure(new Exception("No user logged in"));
+            onFailure.onFailure(new Exception("Nema ulogovanog korisnika"));
             return;
         }
 
@@ -182,7 +168,7 @@ public class AuthRepository {
                     if (snapshot.exists()) {
                         onSuccess.onSuccess(snapshot.toObject(User.class));
                     } else {
-                        onFailure.onFailure(new Exception("User data not found"));
+                        onFailure.onFailure(new Exception("Korisnik nije pronadjen"));
                     }
                 })
                 .addOnFailureListener(onFailure);
@@ -244,5 +230,27 @@ public class AuthRepository {
                             .addOnFailureListener(onFailure);
                 })
                 .addOnFailureListener(onFailure);
+    }
+
+    public void changePassword(String oldPassword, String newPassword,
+                               OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null || user.getEmail() == null) {
+            onFailure.onFailure(new Exception("Nema ulogovanog korisnika"));
+            return;
+        }
+
+        // Re-authenticate first with old password
+        AuthCredential credential = EmailAuthProvider.getCredential(user.getEmail(), oldPassword);
+        user.reauthenticate(credential)
+                .addOnSuccessListener(unused ->
+                        user.updatePassword(newPassword)
+                                .addOnSuccessListener(onSuccess)
+                                .addOnFailureListener(e ->
+                                        onFailure.onFailure(new Exception("Nemoguce promeniti sifru: " + e.getMessage())))
+                )
+                .addOnFailureListener(e ->
+                        onFailure.onFailure(new Exception("Stara sifra nije ispravna"))
+                );
     }
 }

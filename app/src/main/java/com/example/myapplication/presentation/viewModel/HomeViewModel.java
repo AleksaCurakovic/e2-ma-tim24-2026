@@ -18,6 +18,8 @@ public class HomeViewModel extends ViewModel {
 
     private boolean registeredUser = false;
 
+    public final MutableLiveData<String> passwordChangeResult = new MutableLiveData<>();
+
     public void setRegistered(boolean registered) { this.registeredUser = registered; }
     public boolean isRegistered() { return registeredUser; }
 
@@ -36,5 +38,12 @@ public class HomeViewModel extends ViewModel {
                                   OnSuccessListener<Void> onSuccess,
                                   OnFailureListener onFailure) {
         authService.applyGameRewards(starsDelta, onSuccess, onFailure);
+    }
+
+    public void changePassword(String oldPassword, String newPassword) {
+        authService.changePassword(oldPassword, newPassword,
+                unused -> passwordChangeResult.setValue("success"),
+                e -> passwordChangeResult.setValue("error:" + e.getMessage())
+        );
     }
 }

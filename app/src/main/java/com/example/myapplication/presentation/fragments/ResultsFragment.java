@@ -102,9 +102,9 @@ public class ResultsFragment extends Fragment {
         int p2Score = room.getPlayerTwoScore();
 
         if (p1Score > p2Score) {
-            tvWinner.setText("Winner: " + room.getPlayerOne() + " 🏆");
+            tvWinner.setText("Pobednik: " + room.getPlayerOne() + " 🏆");
         } else if (p2Score > p1Score) {
-            tvWinner.setText("Winner: " + room.getPlayerTwo() + " 🏆");
+            tvWinner.setText("Pobednik: " + room.getPlayerTwo() + " 🏆");
         } else {
             tvWinner.setText("Nerešeno!");
         }
