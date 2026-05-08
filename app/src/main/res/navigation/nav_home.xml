@@ -45,7 +45,7 @@
 
     <!-- 3. ADD THE RESULTS FRAGMENT SO THE ACTION HAS A PLACE TO GO -->
     <fragment
-        android:id="@+id/rankingsFragment"
+        android:id="@+id/ranksFragment"
         android:name="com.example.myapplication.presentation.fragments.RankingsFragment"
         android:label="Results" />
 

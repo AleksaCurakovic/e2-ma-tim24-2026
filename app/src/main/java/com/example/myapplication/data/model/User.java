@@ -7,8 +7,8 @@ public class User {
     private String username;
     private String email;
     private String region;
-    private int tokens;
-    private int stars;
+    private Long tokens;
+    private Long stars;
     private String leagueName;
     private String leagueIcon;
     private int avatarId;
@@ -61,19 +61,19 @@ public class User {
         this.region = region;
     }
 
-    public int getTokens() {
-        return tokens;
+    public Long getTokens() {
+        return tokens != null ? tokens : 0L;
     }
 
-    public void setTokens(int tokens) {
+    public void setTokens(Long tokens) {
         this.tokens = tokens;
     }
 
-    public int getStars() {
-        return stars;
+    public Long getStars() {
+        return stars != null ? stars : 0L;
     }
 
-    public void setStars(int stars) {
+    public void setStars(Long stars) {
         this.stars = stars;
     }
 
