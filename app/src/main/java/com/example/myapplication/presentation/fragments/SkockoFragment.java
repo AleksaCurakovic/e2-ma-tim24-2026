@@ -40,7 +40,7 @@ public class SkockoFragment extends Fragment {
 
     private static final int CELL_SIZE_DP   = 64;
     private static final int CELL_MARGIN_DP = 5;
-    private static final int BTN_SIZE_DP    = 56;
+    private static final int BTN_SIZE_DP    = 44;
 
     private GameViewModel vm;
     private String gameId;
