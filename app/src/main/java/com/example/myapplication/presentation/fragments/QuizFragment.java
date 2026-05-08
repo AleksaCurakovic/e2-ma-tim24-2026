@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication.R;
+import com.example.myapplication.data.model.GameRoom;
 import com.example.myapplication.presentation.viewModel.GameViewModel;
 import com.google.android.material.button.MaterialButton;
 
@@ -262,7 +263,10 @@ public class QuizFragment extends Fragment {
             dot.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.bg_quiz_progress_inactive));
         }
 
-        if (gameId != null) {
+        // AFTER
+        GameRoom room = vm.gameRoom.getValue();
+        if (gameId != null && room != null && myUsername != null
+                && myUsername.equals(room.getPlayerOne())) {
             Map<String, Object> updates = new HashMap<>();
             updates.put("roundPhase", "MINIGAME_DONE");
             vm.advancePhase(gameId, updates);

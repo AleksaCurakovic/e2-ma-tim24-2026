@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication.R;
+import com.example.myapplication.data.model.GameRoom;
 import com.example.myapplication.presentation.viewModel.GameViewModel;
 import com.google.android.material.button.MaterialButton;
 
@@ -24,6 +25,7 @@ public class AsocijacijeFragment extends Fragment {
 
     private GameViewModel vm;
     private String gameId;
+    private String myUsername;
     private CountDownTimer roundTimer;
     private boolean roundEnded = false;
 
@@ -39,6 +41,7 @@ public class AsocijacijeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         vm = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
         gameId = getArguments() != null ? getArguments().getString("gameId") : null;
+        myUsername = getArguments() != null ? getArguments().getString("myUsername") : null;
         int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
 
         TextView tvTimer  = view.findViewById(R.id.tvAsocTimer);
@@ -74,11 +77,14 @@ public class AsocijacijeFragment extends Fragment {
         if (roundTimer != null) { roundTimer.cancel(); roundTimer = null; }
     }
 
+    // AFTER
     private void endRound() {
         if (roundEnded) return;
         roundEnded = true;
         if (roundTimer != null) { roundTimer.cancel(); roundTimer = null; }
-        if (gameId != null) {
+        GameRoom room = vm.gameRoom.getValue();
+        if (gameId != null && room != null && myUsername != null
+                && myUsername.equals(room.getPlayerOne())) {
             Map<String, Object> updates = new HashMap<>();
             updates.put("roundPhase", "MINIGAME_DONE");
             vm.advancePhase(gameId, updates);

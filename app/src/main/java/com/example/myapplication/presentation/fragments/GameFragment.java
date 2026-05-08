@@ -91,10 +91,19 @@ public class GameFragment extends Fragment {
                 layoutGame.setVisibility(View.VISIBLE);
 
                 String minigameType = room.getCurrentMinigameType();
-                if (minigameType != null && !minigameType.equals(currentMinigameType)) {
-                    currentMinigameType = minigameType;
-                    roundsPlayed = 0;
-                    loadMinigameFragment(minigameType);
+                if (minigameType != null) {
+                    boolean typeChanged = !minigameType.equals(currentMinigameType);
+                    boolean round2Starting = "P1_TURN".equals(phase)
+                            && minigameType.equals(currentMinigameType)
+                            && roundsPlayed == 1;
+
+                    if (typeChanged) {
+                        currentMinigameType = minigameType;
+                        roundsPlayed = 0;
+                        loadMinigameFragment(minigameType);
+                    } else if (round2Starting) {
+                        loadMinigameFragment(minigameType);
+                    }
                 }
             }
         });
