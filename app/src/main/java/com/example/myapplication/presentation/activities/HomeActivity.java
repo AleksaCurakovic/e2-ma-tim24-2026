@@ -79,7 +79,7 @@ public class HomeActivity extends AppCompatActivity {
         View wrapperTokens = findViewById(R.id.wrapperTokens);
 
         btnMenu.setOnClickListener(v -> toggleDropdown());
-        
+
         HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         homeViewModel.loadUser();
 
