@@ -166,9 +166,12 @@ public class SkockoFragment extends Fragment {
         vm.fetchSkockoSolution(docId, solutionField,
                 sol -> {
                     solution = sol;
+                    if(!isAdded()) return;
                     startTurn();
                 },
-                e -> tvStatus.setText("Greška pri učitavanju!")
+                e -> {
+                    if(!isAdded()) return;
+            tvStatus.setText("Greška pri učitavanju!");}
         );
     }
 
@@ -214,6 +217,9 @@ public class SkockoFragment extends Fragment {
 
         long duration = isBonusMode ? 10_000 : 30_000;
         startTimer(duration);
+        if (solution != null && currentGuess.size() == 4){
+            btnConfirmGuess.setEnabled(true);
+        }
     }
 
 
@@ -222,12 +228,13 @@ public class SkockoFragment extends Fragment {
         if (currentGuess.size() < 4) {
             currentGuess.add(symbol);
             renderCurrentRow();
-            btnConfirmGuess.setEnabled(currentGuess.size() == 4);
+            btnConfirmGuess.setEnabled(currentGuess.size() == 4 && solution != null);
         }
     }
 
     private void submitGuess() {
         if (currentGuess.size() != 4 || turnFinished) return;
+
 
         btnConfirmGuess.setEnabled(false);
 
@@ -247,7 +254,7 @@ public class SkockoFragment extends Fragment {
             turnFinished = true;
             cancelTimer();
             commitTurnToFirestore(solved);
-        } else {
+        } else {    
             renderCurrentRow();
             btnConfirmGuess.setEnabled(false);
         }
@@ -260,6 +267,7 @@ public class SkockoFragment extends Fragment {
 
 
     private void commitTurnToFirestore(boolean solved) {
+        if(!isAdded()) return;
         GameRoom room = vm.gameRoom.getValue();
         if (room == null || activePhase == null) return;
 
@@ -355,11 +363,13 @@ public class SkockoFragment extends Fragment {
         turnTimer = new CountDownTimer(durationMs, 500) {
             @Override
             public void onTick(long ms) {
+                if(!isAdded()) return;
                 tvTimer.setText((ms / 1000) + "s");
             }
 
             @Override
             public void onFinish() {
+                if(!isAdded()) return;
                 tvTimer.setText("0s");
                 if (!turnFinished) {
                     turnFinished = true;
@@ -425,6 +435,7 @@ public class SkockoFragment extends Fragment {
     }
 
     private void renderCurrentRow() {
+        if (currentRow < 0 || currentRow >= maxGuesses) return;
         for (int col = 0; col < 4; col++) {
             ImageView cell = (ImageView) gridGuesses.getChildAt(currentRow * 4 + col);
             if (col < currentGuess.size()) {

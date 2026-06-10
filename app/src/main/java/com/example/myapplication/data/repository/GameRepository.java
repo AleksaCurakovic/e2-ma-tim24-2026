@@ -124,8 +124,8 @@ public class GameRepository {
         playlist.add("quiz:local");
         playlist.add("spojnice:local");
         playlist.add("asocijacije:local");
-        playlist.add("skocko:local");
-        playlist.add("korakPoKorak:local");
+        playlist.add("skocko:4Nu4vTBXWEI4BTKSDpH2");
+        playlist.add("korakPoKorak:JikvyEnu1KOMN6ySvCWV");
         playlist.add("mojbroj:local");
         onSuccess.onSuccess(playlist);
     }

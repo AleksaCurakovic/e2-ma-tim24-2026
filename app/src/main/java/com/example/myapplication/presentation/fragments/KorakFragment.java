@@ -154,11 +154,13 @@ public class KorakFragment extends Fragment {
         String playerPrefix = playerPrefixForPhase(phase);
         vm.fetchKorakSolution(docId, playerPrefix,
                 data -> {
+                    if(!isAdded()) return;
                     answer = (String) data.get("answer");
                     steps  = (List<String>) data.get("steps");
                     startTurn(room, phase);
                 },
                 e -> {
+                    if(!isAdded()) return;
                     tvStatus.setText("Nema podataka...");
                     if (isMyTurn && myUsername.equals(vm.gameRoom.getValue() != null
                             ? vm.gameRoom.getValue().getPlayerOne() : "")) {
@@ -344,6 +346,7 @@ public class KorakFragment extends Fragment {
 
             @Override
             public void onFinish() {
+                if(!isAdded()) return;
                 tvTimer.setText("0s");
                 if (!turnFinished) {
                     turnFinished = true;

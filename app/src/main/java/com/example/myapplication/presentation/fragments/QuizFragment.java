@@ -213,6 +213,7 @@ public class QuizFragment extends Fragment {
         }
 
         selected.postDelayed(() -> {
+            if(!isAdded()) return;
             currentQuestionIndex++;
             bindQuestion();
         }, 800);
