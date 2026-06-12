@@ -10,6 +10,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class AuthRepository {
@@ -176,6 +177,35 @@ public class AuthRepository {
 
     public void logout() {
         auth.signOut();
+    }
+
+    public void updateAvatar(int avatarId, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null || firebaseUser.isAnonymous()) {
+            onFailure.onFailure(new Exception("Nema ulogovanog registrovanog korisnika"));
+            return;
+        }
+
+        db.collection("users").document(firebaseUser.getUid())
+                .update("avatarId", avatarId)
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
+    }
+
+    public void recordGameStats(boolean won, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null || firebaseUser.isAnonymous()) {
+            onSuccess.onSuccess(null);
+            return;
+        }
+
+        db.collection("users").document(firebaseUser.getUid())
+                .update(
+                        "totalGames", FieldValue.increment(1),
+                        won ? "wonGames" : "lostGames", FieldValue.increment(1)
+                )
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
     }
 
     public boolean isGuest() {

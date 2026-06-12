@@ -22,9 +22,11 @@ public class GameRepository {
 
     private static final String COL_REQUESTS = "gameRequests";
     private static final String COL_ROOMS    = "gameRooms";
+    private static final long REQUEST_TTL_MS = 2 * 60 * 1000L;
     private final FirebaseFirestore db;
 
     private ListenerRegistration gameRequestListener;
+    private ListenerRegistration opponentRequestListener;
     private ListenerRegistration gameRoomListener;
 
     private ListenerRegistration roundStateListener;
@@ -43,11 +45,14 @@ public class GameRepository {
                 .addOnSuccessListener(querySnapshot -> {
                     db.runTransaction(transaction -> {
                         List<DocumentSnapshot> available = new ArrayList<>();
+                        long now = System.currentTimeMillis();
                         for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                             DocumentSnapshot fresh = transaction.get(doc.getReference());
                             Boolean accepted = fresh.getBoolean("accepted");
                             String creator   = fresh.getString("creatorName");
-                            if (Boolean.FALSE.equals(accepted) && !username.equals(creator)) {
+                            Long createdAt = fresh.getLong("createdAt");
+                            boolean isFresh = createdAt != null && (now - createdAt) <= REQUEST_TTL_MS;
+                            if (Boolean.FALSE.equals(accepted) && isFresh && !username.equals(creator)) {
                                 available.add(fresh);
                             }
                         }
@@ -63,13 +68,15 @@ public class GameRepository {
                                     PathResult.Type.JOINED,
                                     chosen.getString("gameId"),
                                     chosen.getId(),
-                                    chosen.getString("creatorName")
+                                    chosen.getString("creatorName"),
+                                    chosen.getLong("createdAt") != null ? chosen.getLong("createdAt") : 0
                             );
                         } else {
                             DocumentReference ref = db.collection(COL_REQUESTS).document();
+                            long createdAt = System.currentTimeMillis();
                             GameRequest req = new GameRequest(
                                     username,
-                                    System.currentTimeMillis(),
+                                    createdAt,
                                     UUID.randomUUID().toString()
                             );
                             transaction.set(ref, req);
@@ -77,7 +84,8 @@ public class GameRepository {
                                     PathResult.Type.WAITING,
                                     req.getGameId(),
                                     ref.getId(),
-                                    null
+                                    null,
+                                    createdAt
                             );
                         }
                     }).addOnSuccessListener(onSuccess).addOnFailureListener(onFailure);
@@ -96,6 +104,62 @@ public class GameRepository {
                             onAccepted.onSuccess(req);
                         }
                     }
+                });
+    }
+
+    public void listenForOlderRequest(String ownDocumentId,
+                                      long ownCreatedAt,
+                                      String username,
+                                      OnSuccessListener<PathResult> onJoined,
+                                      OnFailureListener onFailure) {
+        opponentRequestListener = db.collection(COL_REQUESTS)
+                .whereEqualTo("accepted", false)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) { onFailure.onFailure(error); return; }
+                    if (snapshot == null || snapshot.isEmpty()) return;
+
+                    DocumentSnapshot chosen = null;
+                    long now = System.currentTimeMillis();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        if (doc.getId().equals(ownDocumentId)) continue;
+                        String creator = doc.getString("creatorName");
+                        Long createdAt = doc.getLong("createdAt");
+                        if (username.equals(creator) || createdAt == null) continue;
+                        if ((now - createdAt) > REQUEST_TTL_MS) continue;
+                        boolean older = createdAt < ownCreatedAt ||
+                                (createdAt == ownCreatedAt && doc.getId().compareTo(ownDocumentId) < 0);
+                        if (!older) continue;
+                        if (chosen == null || createdAt < chosen.getLong("createdAt")) {
+                            chosen = doc;
+                        }
+                    }
+
+                    if (chosen == null) return;
+                    DocumentReference chosenRef = chosen.getReference();
+                    DocumentReference ownRef = db.collection(COL_REQUESTS).document(ownDocumentId);
+                    db.runTransaction(transaction -> {
+                        DocumentSnapshot fresh = transaction.get(chosenRef);
+                        Boolean accepted = fresh.getBoolean("accepted");
+                        String creator = fresh.getString("creatorName");
+                        if (!Boolean.FALSE.equals(accepted) || username.equals(creator)) {
+                            return null;
+                        }
+
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("accepted", true);
+                        updates.put("joinerName", username);
+                        transaction.update(chosenRef, updates);
+                        transaction.delete(ownRef);
+                        return new PathResult(
+                                PathResult.Type.JOINED,
+                                fresh.getString("gameId"),
+                                fresh.getId(),
+                                creator,
+                                fresh.getLong("createdAt") != null ? fresh.getLong("createdAt") : 0
+                        );
+                    }).addOnSuccessListener(result -> {
+                        if (result != null) onJoined.onSuccess(result);
+                    }).addOnFailureListener(onFailure);
                 });
     }
 
@@ -234,9 +298,14 @@ public class GameRepository {
             gameRequestListener.remove();
             gameRequestListener = null;
         }
+        if (opponentRequestListener != null) {
+            opponentRequestListener.remove();
+            opponentRequestListener = null;
+        }
     }
     public void detachListeners() {
         if (gameRequestListener != null) { gameRequestListener.remove(); gameRequestListener = null; }
+        if (opponentRequestListener != null) { opponentRequestListener.remove(); opponentRequestListener = null; }
         if (gameRoomListener    != null) { gameRoomListener.remove();    gameRoomListener    = null; }
         if (roundStateListener  != null) { roundStateListener.remove();  roundStateListener  = null; }
     }
@@ -249,12 +318,14 @@ public class GameRepository {
         public final String gameId;
         public final String requestDocId;
         public final String otherPlayerName;
+        public final long createdAt;
 
-        public PathResult(Type type, String gameId, String requestDocId, String otherPlayerName) {
+        public PathResult(Type type, String gameId, String requestDocId, String otherPlayerName, long createdAt) {
             this.type            = type;
             this.gameId          = gameId;
             this.requestDocId    = requestDocId;
             this.otherPlayerName = otherPlayerName;
+            this.createdAt       = createdAt;
         }
     }
 }

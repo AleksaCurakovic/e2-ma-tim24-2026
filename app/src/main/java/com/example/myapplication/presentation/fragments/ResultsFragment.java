@@ -22,6 +22,7 @@ public class ResultsFragment extends Fragment {
     private HomeViewModel homeVm;
     private String gameId;
     private boolean hasDeletedRoom = false;
+    private boolean hasRecordedStats = false;
 
     public ResultsFragment() {
         super(R.layout.fragment_results);
@@ -59,6 +60,10 @@ public class ResultsFragment extends Fragment {
 
         boolean iWon = myScore > theirScore;
         int delta = vm.computeStarsDelta(myScore, iWon);
+        if (!hasRecordedStats) {
+            hasRecordedStats = true;
+            homeVm.recordGameStats(iWon);
+        }
 
         homeVm.applyGameRewards(delta,
                 unused -> {

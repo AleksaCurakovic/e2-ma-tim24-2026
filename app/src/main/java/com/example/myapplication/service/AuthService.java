@@ -35,6 +35,14 @@ public class AuthService {
         repository.logout();
     }
 
+    public void updateAvatar(int avatarId, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        repository.updateAvatar(avatarId, onSuccess, onFailure);
+    }
+
+    public void recordGameStats(boolean won, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        repository.recordGameStats(won, onSuccess, onFailure);
+    }
+
     public boolean isGuest() {
         return repository.isGuest();
     }
