@@ -22,7 +22,11 @@ import com.example.myapplication.presentation.viewModel.GameViewModel;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class MojBrojFragment extends Fragment implements SensorEventListener {
 
@@ -51,7 +55,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     private final List<Integer>  usedNumberIndices = new ArrayList<>();
 
     private String  activePhase      = null;
-    private String  lastStartedPhase = null;
     private boolean isRoundOwner     = false;
     private boolean targetRevealed   = false;
     private boolean numbersRevealed  = false;
@@ -59,6 +62,10 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     private boolean scoringDone      = false;
     private int     targetNumber     = 0;
     private List<Integer> availableNumbers = new ArrayList<>();
+
+    // The absolute state lock to prevent database echo loops
+    private final Set<String> completedPhases = new HashSet<>();
+
     private CountDownTimer roundTimer;
     private CountDownTimer stopAutoTimer;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -71,7 +78,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     public MojBrojFragment() {
         super(R.layout.fragment_moj_broj);
     }
-
 
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -111,11 +117,10 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         sensorManager  = (SensorManager) requireContext().getSystemService(android.content.Context.SENSOR_SERVICE);
         accelerometer  = sensorManager != null ? sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) : null;
 
-        vm.currentPhase.observe(getViewLifecycleOwner(), phase -> {
-            if (phase != null) onPhaseChanged(phase);
+        // Unified Observer
+        vm.gameRoom.observe(getViewLifecycleOwner(), room -> {
+            if (room != null) handleStateUpdate(room);
         });
-
-        vm.gameRoom.observe(getViewLifecycleOwner(), this::onRoomUpdated);
     }
 
     @Override
@@ -156,30 +161,38 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
-
-    private void onPhaseChanged(String phase) {
-        GameRoom room = vm.gameRoom.getValue();
-        if (room == null) return;
+    // --- MASTER STATE CONTROLLER ---
+    private void handleStateUpdate(GameRoom room) {
         if (!"mojbroj".equals(room.getCurrentMinigameType())) return;
+        String phase = room.getRoundPhase();
+        if (phase == null) return;
 
-        if (!isPlayablePhase(phase)) {
-            lastStartedPhase = null;
-            showWaiting(phase.equals("MINIGAME_DONE") ? "Kraj runde!" : "Čekaj...");
+        if ("MINIGAME_DONE".equals(phase)) {
             cancelRoundTimer();
             cancelStopAutoTimer();
+            showWaiting("Kraj runde!");
             return;
         }
 
-        if (!phase.equals(lastStartedPhase)) {
-            lastStartedPhase = phase;
-            startRound(room, phase);
+        if (completedPhases.contains(phase)) return;
+
+        if (!phase.equals(activePhase)) {
+            if (isPlayablePhase(phase)) {
+                startRound(room, phase);
+            } else {
+                showWaiting("Čekaj...");
+            }
+            return;
+        }
+
+        if (activePhase != null && activePhase.equals(phase)) {
+            processMidRoundEvents(room);
         }
     }
 
     private boolean isPlayablePhase(String phase) {
         return phase.equals("P1_TURN") || phase.equals("P2_TURN");
     }
-
 
     private void startRound(GameRoom room, String phase) {
         activePhase     = phase;
@@ -192,11 +205,9 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         expression.setLength(0);
         targetNumber    = 0;
 
-
         isRoundOwner = phase.equals("P1_TURN")
                 ? myUsername.equals(room.getPlayerOne())
                 : myUsername.equals(room.getPlayerTwo());
-
 
         tvTarget.setVisibility(View.GONE);
         tvTarget.setText("---");
@@ -205,18 +216,55 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         tvSubmittedResult.setVisibility(View.GONE);
         tvTimer.setVisibility(View.INVISIBLE);
 
+        String currentRoundText = phase.equals("P1_TURN") ? "Runda 1/2" : "Runda 2/2";
         if (isRoundOwner) {
+            tvStatus.setText("Moj broj  •  " + currentRoundText + "  (Biraš brojeve!)");
             btnStopTarget.setVisibility(View.VISIBLE);
             btnStopTarget.setEnabled(true);
-            tvStatus.setText("Pritisni STOP za broj!");
             scheduleAutoStopTarget();
         } else {
+            tvStatus.setText("Moj broj  •  " + currentRoundText + "  (Protivnik bira)");
             btnStopTarget.setVisibility(View.GONE);
-            tvStatus.setText("Čekaj protivnika...");
         }
     }
 
+    private void processMidRoundEvents(GameRoom room) {
+        if (!isRoundOwner && targetNumber == 0) {
+            Object t = room.getMojBrojTarget();
+            if (t != null && ((Number) t).intValue() != 0) {
+                targetNumber = ((Number) t).intValue();
+                showTarget(targetNumber);
+            }
+        }
 
+        if (!isRoundOwner && targetNumber != 0 && !numbersRevealed) {
+            Object nums = room.getMojBrojNumbers();
+            if (nums != null && !((List<?>) nums).isEmpty()) {
+                List<Long> raw = (List<Long>) nums;
+                availableNumbers.clear();
+                for (Long n : raw) availableNumbers.add(n.intValue());
+                numbersRevealed = true;
+                showNumbers();
+                startRoundTimer();
+            }
+        }
+
+        if (submitted && !scoringDone) {
+            Boolean p1Done = room.getMojBrojP1Submitted();
+            Boolean p2Done = room.getMojBrojP2Submitted();
+            if (Boolean.TRUE.equals(p1Done) && Boolean.TRUE.equals(p2Done)) {
+                scoringDone = true;
+                completedPhases.add(activePhase);
+
+                // HOST ELECTION: Only the round owner calculates points & advances the phase
+                if (isRoundOwner) {
+                    scoreAndAdvance(room);
+                } else {
+                    tvStatus.setText("Računanje rezultata...");
+                }
+            }
+        }
+    }
 
     private void onStopTarget() {
         if (targetRevealed || !isRoundOwner) return;
@@ -229,47 +277,8 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         showTarget(targetNumber);
         btnStopNumbers.setVisibility(View.VISIBLE);
         btnStopNumbers.setEnabled(true);
-        tvStatus.setText("Pritisni STOP za brojeve!");
+        tvStatus.setText("Pritisni STOP za brojeve! (ili protresi)");
         scheduleAutoStopNumbers();
-    }
-
-
-    private void onRoomUpdated(GameRoom room) {
-        if (room == null || activePhase == null) return;
-
-
-        if (!isRoundOwner && targetNumber == 0) {
-            Object t = room.getMojBrojTarget();
-            if (t != null) {
-                targetNumber = ((Number) t).intValue();
-                showTarget(targetNumber);
-                tvStatus.setText("Čekaj brojeve...");
-            }
-        }
-
-
-        if (!isRoundOwner && targetNumber != 0 && !numbersRevealed) {
-            Object nums = room.getMojBrojNumbers();
-            if (nums != null) {
-                List<Long> raw = (List<Long>) nums;
-                availableNumbers.clear();
-                for (Long n : raw) availableNumbers.add(n.intValue());
-                numbersRevealed = true;
-                showNumbers();
-                startRoundTimer();
-            }
-        }
-
-
-        if (submitted && isRoundOwner && !scoringDone
-                && activePhase != null && activePhase.equals(room.getRoundPhase())) {
-            Boolean p1Done = room.getMojBrojP1Submitted();
-            Boolean p2Done = room.getMojBrojP2Submitted();
-            if (Boolean.TRUE.equals(p1Done) && Boolean.TRUE.equals(p2Done)) {
-                scoringDone = true;
-                scoreAndAdvance(room);
-            }
-        }
     }
 
     private void showTarget(int target) {
@@ -277,8 +286,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         tvTarget.setText(String.valueOf(target));
         tvTarget.setVisibility(View.VISIBLE);
     }
-
-
 
     private void onStopNumbers() {
         if (numbersRevealed || !isRoundOwner) return;
@@ -358,7 +365,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         }
         if (num.length() > 0) inUse.add(Integer.parseInt(num.toString()));
 
-
         usedNumberIndices.clear();
         List<Integer> pool = new ArrayList<>(availableNumbers);
         for (int n : inUse) {
@@ -389,8 +395,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         }
     }
 
-
-
     private void scheduleAutoStopTarget() {
         cancelStopAutoTimer();
         stopAutoTimer = new CountDownTimer(STOP_AUTO_DELAY_MS, STOP_AUTO_DELAY_MS) {
@@ -411,8 +415,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         if (stopAutoTimer != null) { stopAutoTimer.cancel(); stopAutoTimer = null; }
     }
 
-
-
     private void startRoundTimer() {
         cancelRoundTimer();
         roundTimer = new CountDownTimer(ROUND_DURATION_MS, 500) {
@@ -431,7 +433,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
     private void cancelRoundTimer() {
         if (roundTimer != null) { roundTimer.cancel(); roundTimer = null; }
     }
-
 
     private void submitExpression() {
         if (submitted) return;
@@ -465,11 +466,48 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
 
     private void scoreAndAdvance(GameRoom room) {
         int target = ((Number) room.getMojBrojTarget()).intValue();
-        boolean p1IsRoundOwner = activePhase.equals("P1_TURN");
-        vm.scoreMojBrojRound(gameId, target,
-                room.getMojBrojP1Result(), room.getMojBrojP2Result(),
-                p1IsRoundOwner,
-                room.getPlayerOneScore(), room.getPlayerTwoScore());
+
+        int p1Res =  room.getMojBrojP1Result();
+        int p2Res =  room.getMojBrojP2Result();
+
+        int p1Diff = Math.abs(target - p1Res);
+        int p2Diff = Math.abs(target - p2Res);
+
+        int pts1 = 0;
+        int pts2 = 0;
+
+        // Give points to whoever is closer. Tie gives both players points.
+        if (p1Res != 0 && p2Res != 0) {
+            if (p1Diff < p2Diff) pts1 = (p1Diff == 0) ? 20 : 15;
+            else if (p2Diff < p1Diff) pts2 = (p2Diff == 0) ? 20 : 15;
+            else { pts1 = (p1Diff == 0) ? 20 : 15; pts2 = (p1Diff == 0) ? 20 : 15; }
+        } else if (p1Res != 0) {
+            pts1 = (p1Diff == 0) ? 20 : 15;
+        } else if (p2Res != 0) {
+            pts2 = (p2Diff == 0) ? 20 : 15;
+        }
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("playerOneScore", room.getPlayerOneScore() + pts1);
+        updates.put("playerTwoScore", room.getPlayerTwoScore() + pts2);
+        updates.put("playerOneRoundScore", room.getPlayerOneRoundScore() + pts1);
+        updates.put("playerTwoRoundScore", room.getPlayerTwoRoundScore() + pts2);
+
+        if (activePhase.equals("P1_TURN")) {
+            updates.put("roundPhase", "P2_TURN");
+
+            // Wipe the round state clean for Player 2
+            updates.put("mojBrojP1Submitted", false);
+            updates.put("mojBrojP2Submitted", false);
+            updates.put("mojBrojP1Result", 0);
+            updates.put("mojBrojP2Result", 0);
+            updates.put("mojBrojTarget", 0);
+            updates.put("mojBrojNumbers", new ArrayList<>());
+        } else {
+            updates.put("roundPhase", "MINIGAME_DONE");
+        }
+
+        vm.advancePhase(gameId, updates);
     }
 
     private double evaluate(String expr) {
@@ -510,8 +548,6 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         while (pos[0] < s.length() && Character.isDigit(s.charAt(pos[0]))) pos[0]++;
         return Double.parseDouble(s.substring(start, pos[0]));
     }
-
-
 
     private void showWaiting(String message) {
         tvStatus.setText(message);

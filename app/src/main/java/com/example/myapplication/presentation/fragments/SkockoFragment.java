@@ -23,19 +23,17 @@ import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class SkockoFragment extends Fragment {
 
     private static final String[] SYMBOLS = {"skocko", "kvadrat", "krug", "srce", "trougao", "zvezda"};
     private static final int[] SYMBOL_DRAWABLES = {
-            R.drawable.skocko,
-            R.drawable.square,
-            R.drawable.circle,
-            R.drawable.heart,
-            R.drawable.triangle,
-            R.drawable.star
+            R.drawable.skocko, R.drawable.square, R.drawable.circle,
+            R.drawable.heart, R.drawable.triangle, R.drawable.star
     };
 
     private static final int CELL_SIZE_DP   = 64;
@@ -57,38 +55,39 @@ public class SkockoFragment extends Fragment {
     private List<String> solution;
     private final List<String> currentGuess = new ArrayList<>();
     private final List<Map<String, Object>> localGuessHistory = new ArrayList<>();
+
     private int currentRow = 0;
     private boolean isMyTurn = false;
     private boolean isBonusMode = false;
     private int maxGuesses = 6;
     private boolean turnFinished = false;
     private String activePhase = null;
-    private String lastStartedPhase = null;
 
+    // Tracks processed phases to enforce absolute single-execution rules per turn
+    private final Set<String> completedPhases = new HashSet<>();
     private CountDownTimer turnTimer;
 
     public SkockoFragment() {
         super(R.layout.fragment_skocko);
     }
 
-
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         vm = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
-        gameId     = getArguments().getString("gameId");
-        myUsername = getArguments().getString("myUsername");
+        gameId     = getArguments() != null ? getArguments().getString("gameId") : "";
+        myUsername = getArguments() != null ? getArguments().getString("myUsername") : "";
         int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
 
-        tvStatus          = view.findViewById(R.id.tvStatus);
-        tvTimer           = view.findViewById(R.id.tvTimer);
-        gridGuesses       = view.findViewById(R.id.gridGuesses);
+        tvStatus            = view.findViewById(R.id.tvStatus);
+        tvTimer             = view.findViewById(R.id.tvTimer);
+        gridGuesses         = view.findViewById(R.id.gridGuesses);
         layoutSymbolPicker  = view.findViewById(R.id.layoutSymbolPicker);
         scrollSymbolPicker  = view.findViewById(R.id.scrollSymbolPicker);
         tvSelectSymbols     = view.findViewById(R.id.tvSelectSymbols);
         btnConfirmGuess     = view.findViewById(R.id.btnConfirmGuess);
 
         tvStatus.setText("Škocko  •  Runda " + roundNumber + "/2");
-
+        setupGuessGrid();
         setupSymbolPicker();
         btnConfirmGuess.setOnClickListener(v -> submitGuess());
 
@@ -103,19 +102,33 @@ public class SkockoFragment extends Fragment {
         cancelTimer();
     }
 
-
-
     private void onPhaseChanged(String phase) {
         GameRoom room = vm.gameRoom.getValue();
         if (room == null) return;
         if (!"skocko".equals(room.getCurrentMinigameType())) return;
 
+        // 1. TERMINAL STATE CHECK: Stop instantly if minigame has ended
+        if ("MINIGAME_DONE".equals(phase)) {
+            cancelTimer();
+            showWaiting("Kraj runde!");
+            return;
+        }
+
+        // 2. COMPLETED PHASE CHECK: Reject processing if we have explicitly completed this phase locally
+        if (completedPhases.contains(phase)) {
+            return;
+        }
+
+        // 3. IDEMPOTENCY LOCK: Block processing snapshot echoes of the exact turn we are working on
+        if (phase.equals(activePhase) && turnFinished) {
+            return;
+        }
+
         isBonusMode = phase.contains("BONUS");
-        maxGuesses  = isBonusMode ? 1 : 6;
         isMyTurn    = isActivePlayer(phase, room);
 
         if (!isMyTurn) {
-            lastStartedPhase = null;
+            activePhase = phase;
             cancelTimer();
             if (phase.equals("MINIGAME_DONE")) {
                 showWaiting("Kraj runde!");
@@ -125,10 +138,47 @@ public class SkockoFragment extends Fragment {
             return;
         }
 
-        if (!phase.equals(lastStartedPhase)) {
-            lastStartedPhase = phase;
-            loadSolutionThenStart(room);
+        // 4. SYNCHRONOUSLY INITIALIZE LOCAL VALUES (Safe from Async Overwrites)
+        activePhase  = phase;
+        turnFinished = false;
+        currentGuess.clear();
+        localGuessHistory.clear();
+        currentRow   = 0;
+
+        if (isBonusMode) {
+            List<Map<String, Object>> history = phase.equals("P2_BONUS")
+                    ? room.getP1GuessHistory()
+                    : room.getP2GuessHistory();
+            int historySize = (history != null) ? history.size() : 0;
+            maxGuesses = historySize + 1;
+        } else {
+            maxGuesses = 6;
         }
+
+        // Build grid layout structure
+        setupGuessGrid();
+
+        // 1. RESTORED: Actually draw the opponent's previous guesses!
+        if (isBonusMode) {
+            renderOpponentHistory(room);
+        }
+
+        // 2. FIXED: Set the top text properly so it doesn't overwrite itself
+        String currentRoundText = phase.startsWith("P1") ? "Runda 1/2" : "Runda 2/2";
+        if (isBonusMode) {
+            tvStatus.setText("Škocko  •  " + currentRoundText + "  (Bonus potez!)");
+        } else {
+            tvStatus.setText("Škocko  •  " + currentRoundText + "  (Tvoj red!)");
+        }
+
+        tvTimer.setVisibility(View.VISIBLE);
+        tvSelectSymbols.setVisibility(View.VISIBLE);
+        scrollSymbolPicker.setVisibility(View.VISIBLE);
+        layoutSymbolPicker.setVisibility(View.VISIBLE);
+        btnConfirmGuess.setVisibility(View.VISIBLE);
+        btnConfirmGuess.setEnabled(false);
+
+        loadSolutionThenStart(room);
     }
 
     private boolean isActivePlayer(String phase, GameRoom room) {
@@ -155,20 +205,28 @@ public class SkockoFragment extends Fragment {
         currentRow = 0;
     }
 
-
-
     private void loadSolutionThenStart(GameRoom room) {
-        tvStatus.setText("Učitavanje...");
+        tvStatus.setText(isBonusMode ? "Bonus potez!" : "Tvoj red!");
         String entry = room.getMinigamePlaylist().get(room.getCurrentMinigameIndex());
         String docId = entry.contains(":") ? entry.split(":")[1] : entry;
-        String solutionField = solutionFieldForPhase(room.getRoundPhase());
+        String solutionField = solutionFieldForPhase(activePhase);
 
         vm.fetchSkockoSolution(docId, solutionField,
                 sol -> {
+                    if (!isAdded() || turnFinished) return;
                     solution = sol;
-                    startTurn();
+
+                    long duration = isBonusMode ? 10_000 : 30_000;
+                    startTimer(duration);
+
+                    if (solution != null && currentGuess.size() == 4) {
+                        btnConfirmGuess.setEnabled(true);
+                    }
                 },
-                e -> tvStatus.setText("Greška pri učitavanju!")
+                e -> {
+                    if (!isAdded()) return;
+                    tvStatus.setText("Greška pri učitavanju!");
+                }
         );
     }
 
@@ -182,47 +240,12 @@ public class SkockoFragment extends Fragment {
         }
     }
 
-    private void startTurn() {
-        GameRoom room = vm.gameRoom.getValue();
-        activePhase   = room != null ? room.getRoundPhase() : null;
-        currentRow    = 0;
-        turnFinished  = false;
-        currentGuess.clear();
-        localGuessHistory.clear();
-
-        if (isBonusMode && room != null) {
-            List<Map<String, Object>> history = activePhase.equals("P2_BONUS")
-                    ? room.getP1GuessHistory()
-                    : room.getP2GuessHistory();
-            int historySize = (history != null) ? history.size() : 0;
-            maxGuesses = historySize + 1;
-        }
-
-        setupGuessGrid();
-
-        if (isBonusMode) {
-            renderOpponentHistory(room);
-        }
-
-        tvStatus.setText(isBonusMode ? "Bonus potez!" : "Tvoj red!");
-        tvTimer.setVisibility(View.VISIBLE);
-        tvSelectSymbols.setVisibility(View.VISIBLE);
-        scrollSymbolPicker.setVisibility(View.VISIBLE);
-        layoutSymbolPicker.setVisibility(View.VISIBLE);
-        btnConfirmGuess.setVisibility(View.VISIBLE);
-        btnConfirmGuess.setEnabled(false);
-
-        long duration = isBonusMode ? 10_000 : 30_000;
-        startTimer(duration);
-    }
-
-
     private void addSymbolToGuess(String symbol) {
         if (!isMyTurn || turnFinished) return;
         if (currentGuess.size() < 4) {
             currentGuess.add(symbol);
             renderCurrentRow();
-            btnConfirmGuess.setEnabled(currentGuess.size() == 4);
+            btnConfirmGuess.setEnabled(currentGuess.size() == 4 && solution != null);
         }
     }
 
@@ -246,6 +269,9 @@ public class SkockoFragment extends Fragment {
         if (solved || currentRow >= maxGuesses) {
             turnFinished = true;
             cancelTimer();
+            if (activePhase != null) {
+                completedPhases.add(activePhase);
+            }
             commitTurnToFirestore(solved);
         } else {
             renderCurrentRow();
@@ -258,8 +284,8 @@ public class SkockoFragment extends Fragment {
         return true;
     }
 
-
     private void commitTurnToFirestore(boolean solved) {
+        if (!isAdded()) return;
         GameRoom room = vm.gameRoom.getValue();
         if (room == null || activePhase == null) return;
 
@@ -275,7 +301,7 @@ public class SkockoFragment extends Fragment {
                 updates.put("playerOneRoundScore", score);
                 updates.put("playerOneScore", room.getPlayerOneScore() + score);
                 updates.put("p1GuessHistory", new ArrayList<>(localGuessHistory));
-            } else {
+            } else if (phase.equals("P2_TURN")) {
                 updates.put("playerTwoRoundScore", score);
                 updates.put("playerTwoScore", room.getPlayerTwoScore() + score);
                 updates.put("p2GuessHistory", new ArrayList<>(localGuessHistory));
@@ -285,13 +311,14 @@ public class SkockoFragment extends Fragment {
                 if (phase.equals("P1_BONUS")) {
                     updates.put("playerOneRoundScore", room.getPlayerOneRoundScore() + score);
                     updates.put("playerOneScore", room.getPlayerOneScore() + score);
-                } else {
+                } else if (phase.equals("P2_BONUS")) {
                     updates.put("playerTwoRoundScore", room.getPlayerTwoRoundScore() + score);
                     updates.put("playerTwoScore", room.getPlayerTwoScore() + score);
                 }
             }
         }
 
+        // Let the master game sequencer wipe histories between full minigames, completely preventing database sync loops
         vm.advancePhase(gameId, updates);
     }
 
@@ -313,15 +340,6 @@ public class SkockoFragment extends Fragment {
         }
     }
 
-    private void clearTurnState() {
-        activePhase  = null;
-        turnFinished = false;
-        currentRow   = 0;
-        currentGuess.clear();
-        localGuessHistory.clear();
-    }
-
-
     private void renderOpponentHistory(GameRoom room) {
         if (room == null) return;
 
@@ -341,7 +359,7 @@ public class SkockoFragment extends Fragment {
             for (int col = 0; col < 4; col++) {
                 ImageView cell = (ImageView) gridGuesses.getChildAt(row * 4 + col);
                 int idx = Arrays.asList(SYMBOLS).indexOf(guess.get(col));
-                if (idx >= 0) cell.setImageResource(SYMBOL_DRAWABLES[idx]);
+                if (idx >= 0 && cell != null) cell.setImageResource(SYMBOL_DRAWABLES[idx]);
             }
             renderFeedback(row, feedback);
         }
@@ -349,20 +367,24 @@ public class SkockoFragment extends Fragment {
         currentRow = history.size();
     }
 
-
     private void startTimer(long durationMs) {
         cancelTimer();
         turnTimer = new CountDownTimer(durationMs, 500) {
             @Override
             public void onTick(long ms) {
+                if (!isAdded()) return;
                 tvTimer.setText((ms / 1000) + "s");
             }
 
             @Override
             public void onFinish() {
+                if (!isAdded()) return;
                 tvTimer.setText("0s");
                 if (!turnFinished) {
                     turnFinished = true;
+                    if (activePhase != null) {
+                        completedPhases.add(activePhase);
+                    }
                     commitTurnToFirestore(false);
                 }
             }
@@ -375,8 +397,6 @@ public class SkockoFragment extends Fragment {
             turnTimer = null;
         }
     }
-
-
 
     private void setupGuessGrid() {
         gridGuesses.removeAllViews();
@@ -427,6 +447,7 @@ public class SkockoFragment extends Fragment {
     private void renderCurrentRow() {
         for (int col = 0; col < 4; col++) {
             ImageView cell = (ImageView) gridGuesses.getChildAt(currentRow * 4 + col);
+            if (cell == null) return;
             if (col < currentGuess.size()) {
                 int idx = Arrays.asList(SYMBOLS).indexOf(currentGuess.get(col));
                 cell.setImageResource(SYMBOL_DRAWABLES[idx]);
@@ -441,6 +462,7 @@ public class SkockoFragment extends Fragment {
     private void renderFeedback(int row, List<String> feedback) {
         for (int col = 0; col < 4; col++) {
             ImageView cell = (ImageView) gridGuesses.getChildAt(row * 4 + col);
+            if (cell == null || col >= feedback.size()) continue;
             int bgRes;
             switch (feedback.get(col)) {
                 case "CORRECT": bgRes = R.drawable.bg_feedback_correct; break;

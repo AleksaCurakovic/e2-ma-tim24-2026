@@ -74,7 +74,7 @@ public class SpojniceFragment extends Fragment {
         setupColumn(gridRight, right, false, tvResult);
 
         tvTimer.setText("30s");
-        roundTimer = new CountDownTimer(30_000L, 1_000L) {
+        roundTimer = new CountDownTimer(5_000L, 1_000L) {
             @Override public void onTick(long ms) { tvTimer.setText((ms / 1000) + "s"); }
             @Override public void onFinish() { tvTimer.setText("0s"); endRound(); }
         };

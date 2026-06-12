@@ -80,7 +80,10 @@ public class GameFragment extends Fragment {
             String phase = room.getRoundPhase();
             if ("MINIGAME_DONE".equals(phase)) {
                 roundsPlayed++;
-                if (roundsPlayed >= ROUNDS_PER_GAME) {
+                int requiredRounds = ("skocko".equals(currentMinigameType)
+                        || "korakPoKorak".equals(currentMinigameType)
+                        || "mojbroj".equals(currentMinigameType)) ? 1 : ROUNDS_PER_GAME;
+                if (roundsPlayed >= requiredRounds) { // <--- CHANGED HERE
                     roundsPlayed = 0;
                     currentMinigameType = null;
                     scheduleAdvance();

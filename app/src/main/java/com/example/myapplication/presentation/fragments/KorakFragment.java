@@ -21,8 +21,10 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class KorakFragment extends Fragment {
 
@@ -50,21 +52,20 @@ public class KorakFragment extends Fragment {
     private boolean isBonusMode   = false;
     private boolean turnFinished  = false;
     private String  activePhase   = null;
-    private String  lastStartedPhase = null;
 
+    // Absolute local state tracking thread guards
+    private final Set<String> completedPhases = new HashSet<>();
     private CountDownTimer turnTimer;
 
     public KorakFragment() {
         super(R.layout.fragment_korak);
     }
 
-
-
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         vm         = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
-        gameId     = getArguments().getString("gameId");
-        myUsername = getArguments().getString("myUsername");
+        gameId     = getArguments() != null ? getArguments().getString("gameId") : "";
+        myUsername = getArguments() != null ? getArguments().getString("myUsername") : "";
         int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
 
         tvStatus          = view.findViewById(R.id.tvKorakStatus);
@@ -99,31 +100,59 @@ public class KorakFragment extends Fragment {
         cancelTimer();
     }
 
-
-
     private void onPhaseChanged(String phase) {
         GameRoom room = vm.gameRoom.getValue();
-        if (room == null) return;
+        if (room == null || phase == null) return;
         if (!"korakPoKorak".equals(room.getCurrentMinigameType())) return;
+
+        // 1. TERMINAL STATE GATE
+        if ("MINIGAME_DONE".equals(phase)) {
+            cancelTimer();
+            showWaiting("Kraj runde!");
+            return;
+        }
+
+        // 2. RE-ENTRY CHECK (Idempotency)
+        if (completedPhases.contains(phase)) {
+            return;
+        }
+
+        // 3. ECHO LOCK (Prevents snapshot echo updates)
+        if (phase.equals(activePhase) && turnFinished) {
+            return;
+        }
 
         isBonusMode = phase.contains("BONUS");
         isMyTurn    = isActivePlayer(phase, room);
 
         if (!isMyTurn) {
-            lastStartedPhase = null;
+            activePhase = phase;
             cancelTimer();
-            if (phase.equals("MINIGAME_DONE")) {
-                showWaiting("Kraj runde!");
-            } else {
-                showWaiting("Čekaj na protivnika...");
-            }
+            showWaiting("Čekaj na protivnika...");
             return;
         }
 
-        if (!phase.equals(lastStartedPhase)) {
-            lastStartedPhase = phase;
-            loadDataThenStart(room, phase);
+        // 4. SYNCHRONOUS GAME VARIABLE BINDING (Safe from async overwrites)
+        activePhase   = phase;
+        turnFinished  = false;
+        revealedSteps = 0;
+        etAnswer.setText("");
+        if (tilAnswer != null) tilAnswer.setError(null);
+        layoutSteps.removeAllViews();
+
+        // 5. DYNAMIC UI TEXT HANDLING
+        String currentRoundText = phase.startsWith("P1") ? "Runda 1/2" : "Runda 2/2";
+        if (isBonusMode) {
+            tvStatus.setText("Korak  •  " + currentRoundText + "  (Bonus!)");
+        } else {
+            tvStatus.setText("Korak  •  " + currentRoundText + "  (Tvoj red!)");
         }
+
+        layoutAnswerInput.setVisibility(View.VISIBLE);
+        tvTimer.setVisibility(View.VISIBLE);
+        btnSubmitAnswer.setEnabled(false); // Wait for fetch before enabling
+
+        loadDataThenStart(room, phase);
     }
 
     private boolean isActivePlayer(String phase, GameRoom room) {
@@ -145,23 +174,34 @@ public class KorakFragment extends Fragment {
         revealedSteps = 0;
     }
 
-
-
     private void loadDataThenStart(GameRoom room, String phase) {
-        tvStatus.setText("Učitavanje...");
         String entry        = room.getMinigamePlaylist().get(room.getCurrentMinigameIndex());
         String docId        = entry.contains(":") ? entry.split(":")[1] : entry;
         String playerPrefix = playerPrefixForPhase(phase);
+
         vm.fetchKorakSolution(docId, playerPrefix,
                 data -> {
+                    if (!isAdded() || turnFinished) return;
                     answer = (String) data.get("answer");
                     steps  = (List<String>) data.get("steps");
-                    startTurn(room, phase);
+
+                    btnSubmitAnswer.setEnabled(true);
+
+                    if (isBonusMode) {
+                        revealAllSteps();
+                        startTimer(STEP_INTERVAL_MS);
+                    } else {
+                        revealStep();
+                        startTimer(ROUND_DURATION_MS);
+                    }
                 },
                 e -> {
+                    if (!isAdded()) return;
                     tvStatus.setText("Nema podataka...");
-                    if (isMyTurn && myUsername.equals(vm.gameRoom.getValue() != null
-                            ? vm.gameRoom.getValue().getPlayerOne() : "")) {
+                    if (isMyTurn) {
+                        // Safe skip if data is missing
+                        turnFinished = true;
+                        completedPhases.add(activePhase);
                         Map<String, Object> skip = new HashMap<>();
                         skip.put("roundPhase", "MINIGAME_DONE");
                         vm.advancePhase(gameId, skip);
@@ -180,46 +220,20 @@ public class KorakFragment extends Fragment {
         }
     }
 
-    private void startTurn(GameRoom room, String phase) {
-        activePhase   = phase;
-        revealedSteps = 0;
-        turnFinished  = false;
-        etAnswer.setText("");
-
-        layoutSteps.removeAllViews();
-
-        if (isBonusMode) {
-
-            tvStatus.setText("Bonus! Pogodi za 5 bodova!");
-            revealAllSteps();
-            tvTimer.setVisibility(View.VISIBLE);
-            layoutAnswerInput.setVisibility(View.VISIBLE);
-            btnSubmitAnswer.setEnabled(true);
-            startTimer(STEP_INTERVAL_MS);
-        } else {
-            tvStatus.setText("Tvoj red!");
-            revealStep();
-            tvTimer.setVisibility(View.VISIBLE);
-            layoutAnswerInput.setVisibility(View.VISIBLE);
-            btnSubmitAnswer.setEnabled(true);
-            startTimer(ROUND_DURATION_MS);
-        }
-    }
-
-
-
     private void revealStep() {
-        if (revealedSteps >= TOTAL_STEPS) return;
+        if (revealedSteps >= TOTAL_STEPS || steps == null) return;
         addStepCard(revealedSteps, steps.get(revealedSteps));
         revealedSteps++;
         if (scrollSteps != null) scrollSteps.post(() -> scrollSteps.fullScroll(android.widget.ScrollView.FOCUS_DOWN));
     }
 
     private void revealAllSteps() {
-        for (int i = 0; i < TOTAL_STEPS; i++) {
+        if (steps == null) return;
+        for (int i = 0; i < TOTAL_STEPS && i < steps.size(); i++) {
             addStepCard(i, steps.get(i));
         }
         revealedSteps = TOTAL_STEPS;
+        if (scrollSteps != null) scrollSteps.post(() -> scrollSteps.fullScroll(android.widget.ScrollView.FOCUS_DOWN));
     }
 
     private void addStepCard(int index, String text) {
@@ -256,7 +270,6 @@ public class KorakFragment extends Fragment {
         layoutSteps.addView(card);
     }
 
-
     private void submitAnswer() {
         if (turnFinished) return;
         String input = etAnswer.getText().toString().trim();
@@ -265,6 +278,7 @@ public class KorakFragment extends Fragment {
         if (input.equalsIgnoreCase(answer)) {
             turnFinished = true;
             cancelTimer();
+            if (activePhase != null) completedPhases.add(activePhase);
             layoutAnswerInput.setVisibility(View.GONE);
             tvStatus.setText("Tačno! ✓");
             commitTurnToFirestore(true);
@@ -273,8 +287,6 @@ public class KorakFragment extends Fragment {
             if (tilAnswer != null) tilAnswer.setError("Nije tačno, pokušaj ponovo");
         }
     }
-
-
 
     private void commitTurnToFirestore(boolean solved) {
         GameRoom room = vm.gameRoom.getValue();
@@ -290,7 +302,7 @@ public class KorakFragment extends Fragment {
             if (activePhase.equals("P1_TURN")) {
                 updates.put("playerOneRoundScore", score);
                 updates.put("playerOneScore", room.getPlayerOneScore() + score);
-            } else {
+            } else if (activePhase.equals("P2_TURN")) {
                 updates.put("playerTwoRoundScore", score);
                 updates.put("playerTwoScore", room.getPlayerTwoScore() + score);
             }
@@ -299,7 +311,7 @@ public class KorakFragment extends Fragment {
                 if (activePhase.equals("P1_BONUS")) {
                     updates.put("playerOneRoundScore", room.getPlayerOneRoundScore() + score);
                     updates.put("playerOneScore", room.getPlayerOneScore() + score);
-                } else {
+                } else if (activePhase.equals("P2_BONUS")) {
                     updates.put("playerTwoRoundScore", room.getPlayerTwoRoundScore() + score);
                     updates.put("playerTwoScore", room.getPlayerTwoScore() + score);
                 }
@@ -344,9 +356,11 @@ public class KorakFragment extends Fragment {
 
             @Override
             public void onFinish() {
+                if (!isAdded()) return;
                 tvTimer.setText("0s");
                 if (!turnFinished) {
                     turnFinished = true;
+                    if (activePhase != null) completedPhases.add(activePhase);
                     layoutAnswerInput.setVisibility(View.GONE);
                     commitTurnToFirestore(false);
                 }
@@ -360,8 +374,6 @@ public class KorakFragment extends Fragment {
             turnTimer = null;
         }
     }
-
-
 
     private int dp(int dp) {
         float density = requireContext().getResources().getDisplayMetrics().density;

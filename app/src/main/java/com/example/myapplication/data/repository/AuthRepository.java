@@ -198,7 +198,7 @@ public class AuthRepository {
                         return;
                     }
                     db.collection("users").document(uid)
-                            .update("tokens", tokens - 1)
+                            .update("tokens", tokens - 5)
                             .addOnSuccessListener(onSuccess)
                             .addOnFailureListener(onFailure);
                 })

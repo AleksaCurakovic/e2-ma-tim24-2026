@@ -29,7 +29,7 @@ import java.util.Map;
 
 public class QuizFragment extends Fragment {
 
-    private static final long ROUND_DURATION_MS = 30_000L;
+    private static final long ROUND_DURATION_MS = 5_000L;
 
     private static final class QuizQuestion {
         final String prompt;
@@ -175,7 +175,7 @@ public class QuizFragment extends Fragment {
     private void buildAnswerButtons(QuizQuestion question) {
         layoutAnswers.removeAllViews();
         for (int i = 0; i < question.answers.size(); i++) {
-            MaterialButton btn = new MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            MaterialButton btn = new MaterialButton(requireContext(), null,  com.google.android.material.R.attr.materialButtonOutlinedStyle);
             btn.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             btn.setText(question.answers.get(i));
@@ -213,6 +213,7 @@ public class QuizFragment extends Fragment {
         }
 
         selected.postDelayed(() -> {
+            if (!isAdded()) return; //added
             currentQuestionIndex++;
             bindQuestion();
         }, 800);
