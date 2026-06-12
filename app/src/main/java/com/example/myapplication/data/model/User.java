@@ -13,6 +13,9 @@ public class User {
     private String leagueIcon;
     private int avatarId;
     private String qrCode;
+    private int totalGames;
+    private int wonGames;
+    private int lostGames;
 
     private long lastLoginTime;
 
@@ -23,10 +26,14 @@ public class User {
         this.username = username;
         this.email = email;
         this.region = region;
-        this.tokens = 0;
+        this.tokens = 5;
         this.lastLoginTime = 0;
         this.leagueName = "Commoner";
         this.leagueIcon = "league0";
+        this.avatarId = 0;
+        this.totalGames = 0;
+        this.wonGames = 0;
+        this.lostGames = 0;
     }
 
     public String getUid() {
@@ -109,5 +116,29 @@ public class User {
 
     public void setQrCode(String qrCode) {
         this.qrCode = qrCode;
+    }
+
+    public int getTotalGames() {
+        return totalGames;
+    }
+
+    public void setTotalGames(int totalGames) {
+        this.totalGames = totalGames;
+    }
+
+    public int getWonGames() {
+        return wonGames;
+    }
+
+    public void setWonGames(int wonGames) {
+        this.wonGames = wonGames;
+    }
+
+    public int getLostGames() {
+        return lostGames;
+    }
+
+    public void setLostGames(int lostGames) {
+        this.lostGames = lostGames;
     }
 }

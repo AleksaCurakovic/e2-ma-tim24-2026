@@ -46,4 +46,22 @@ public class HomeViewModel extends ViewModel {
                 e -> passwordChangeResult.setValue("error:" + e.getMessage())
         );
     }
+
+    public void updateAvatar(int avatarId) {
+        authService.updateAvatar(avatarId,
+                unused -> loadUser(),
+                e -> errorMessage.setValue(e.getMessage())
+        );
+    }
+
+    public void recordGameStats(boolean won) {
+        authService.recordGameStats(won,
+                unused -> {},
+                e -> errorMessage.setValue(e.getMessage())
+        );
+    }
+
+    public void logout() {
+        authService.logout();
+    }
 }

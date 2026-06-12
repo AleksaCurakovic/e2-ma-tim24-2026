@@ -1,41 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#F5F5F5">
+    android:background="#F5F7FB">
 
-    <TextView
-        android:id="@+id/tvAsocTimer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="120s"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:background="@drawable/bg_timer_pill"
-        android:textColor="@color/white"
-        android:paddingLeft="12dp"
-        android:paddingRight="12dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"
-        android:layout_gravity="end"
-        android:layout_marginBottom="12dp"/>
-
-    <GridLayout
-        android:id="@+id/gridAsoc"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:columnCount="4"/>
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <TextView
-        android:id="@+id/tvAsocStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=""
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:textColor="#333"
-        android:layout_marginTop="12dp"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
 
-</LinearLayout>
+            <TextView
+                android:id="@+id/tvAsocStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Asocijacije"
+                android:textColor="#172033"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvAsocTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_timer_pill"
+                android:paddingStart="12dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="6dp"
+                android:text="120s"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <GridLayout
+            android:id="@+id/gridAsoc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="4"
+            android:layout_marginBottom="14dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilAsocGuess"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Unesi resenje">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etAsocGuess"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionDone"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnGuessA"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="A" />
+
+            <Button
+                android:id="@+id/btnGuessB"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="B" />
+
+            <Button
+                android:id="@+id/btnGuessC"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="C" />
+
+            <Button
+                android:id="@+id/btnGuessD"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="D" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnGuessFinal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Konacno resenje" />
+    </LinearLayout>
+</ScrollView>

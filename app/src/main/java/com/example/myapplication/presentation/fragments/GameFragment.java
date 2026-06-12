@@ -30,8 +30,6 @@ public class GameFragment extends Fragment {
         MINIGAME_REGISTRY.put("asocijacije", AsocijacijeFragment.class);
     }
 
-    private static final int ROUNDS_PER_GAME = 2;
-
     private GameViewModel vm;
     private String gameId;
     private String myUsername;
@@ -80,7 +78,7 @@ public class GameFragment extends Fragment {
             String phase = room.getRoundPhase();
             if ("MINIGAME_DONE".equals(phase)) {
                 roundsPlayed++;
-                if (roundsPlayed >= ROUNDS_PER_GAME) {
+                if (roundsPlayed >= roundsFor(room.getCurrentMinigameType())) {
                     roundsPlayed = 0;
                     currentMinigameType = null;
                     scheduleAdvance();
@@ -166,6 +164,7 @@ public class GameFragment extends Fragment {
         int nextIndex = room.getCurrentMinigameIndex() + 1;
 
         Map<String, Object> updates = new HashMap<>();
+        addTransientGameStateReset(updates);
 
         if (nextIndex >= room.getMinigamePlaylist().size()) {
             updates.put("gameState", "FINISHED");
@@ -180,6 +179,31 @@ public class GameFragment extends Fragment {
         }
 
         vm.advancePhase(gameId, updates);
+    }
+
+    private int roundsFor(String minigameType) {
+        return 1;
+    }
+
+    private void addTransientGameStateReset(Map<String, Object> updates) {
+        updates.put("quizQuestionIndex", 0);
+        updates.put("quizQuestionStartedAt", 0);
+        updates.put("quizP1Answered", false);
+        updates.put("quizP2Answered", false);
+        updates.put("quizP1Correct", false);
+        updates.put("quizP2Correct", false);
+        updates.put("quizCorrectClaimed", false);
+
+        updates.put("spojniceRoundIndex", 0);
+        updates.put("spojniceSolvedLeft", new java.util.ArrayList<String>());
+        updates.put("spojniceAttemptedLeft", new java.util.ArrayList<String>());
+
+        updates.put("asocRoundIndex", 0);
+        updates.put("asocOpenedCells", new java.util.ArrayList<Integer>());
+        updates.put("asocSolvedColumns", new java.util.ArrayList<String>());
+        updates.put("asocTurnPlayer", null);
+        updates.put("asocFinalSolved", false);
+        updates.put("asocRoundStartedAt", 0);
     }
 
     private void navigateToResults() {

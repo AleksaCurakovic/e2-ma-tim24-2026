@@ -29,7 +29,7 @@ import java.util.Map;
 
 public class QuizFragment extends Fragment {
 
-    private static final long ROUND_DURATION_MS = 30_000L;
+    private static final long QUESTION_DURATION_MS = 5_000L;
 
     private static final class QuizQuestion {
         final String prompt;
@@ -44,31 +44,16 @@ public class QuizFragment extends Fragment {
     }
 
     private final List<QuizQuestion> questions = Arrays.asList(
-            new QuizQuestion(
-                    "Najviši vrh na Balkanu je?",
-                    Arrays.asList("Rila – Musala", "Durmitor – Bobotov kuk", "Prokletije – Jezerca", "Šar-planina – Titov vrh"),
-                    0
-            ),
-            new QuizQuestion(
-                    "Koji naučnik je formulisao zakon gravitacije?",
-                    Arrays.asList("Nikola Tesla", "Isak Njutn", "Galileo Galilej", "Džejms Vot"),
-                    1
-            ),
-            new QuizQuestion(
-                    "Prestonica Finske je?",
-                    Arrays.asList("Oslo", "Kopenhagen", "Helsinki", "Rejkjavik"),
-                    2
-            ),
-            new QuizQuestion(
-                    "Koliko je 7 · 8?",
-                    Arrays.asList("48", "54", "56", "62"),
-                    2
-            ),
-            new QuizQuestion(
-                    "Koji je najveći kontinent na svetu?",
-                    Arrays.asList("Afrika", "Azija", "Severna Amerika", "Antarktik"),
-                    1
-            )
+            new QuizQuestion("Najvisi vrh na Balkanu je?",
+                    Arrays.asList("Rila - Musala", "Durmitor - Bobotov kuk", "Prokletije - Jezerca", "Sar-planina - Titov vrh"), 0),
+            new QuizQuestion("Koji naucnik je formulisao zakon gravitacije?",
+                    Arrays.asList("Nikola Tesla", "Isak Njutn", "Galileo Galilej", "Dzejms Vot"), 1),
+            new QuizQuestion("Prestonica Finske je?",
+                    Arrays.asList("Oslo", "Kopenhagen", "Helsinki", "Rejkjavik"), 2),
+            new QuizQuestion("Koliko je 7 * 8?",
+                    Arrays.asList("48", "54", "56", "62"), 2),
+            new QuizQuestion("Koji je najveci kontinent na svetu?",
+                    Arrays.asList("Afrika", "Azija", "Severna Amerika", "Antarktik"), 1)
     );
 
     private GameViewModel vm;
@@ -81,13 +66,13 @@ public class QuizFragment extends Fragment {
     private LinearLayout layoutAnswers;
     private TextView tvResult;
     private TextView tvPlayerOneScore;
+    private TextView tvPlayerTwoScore;
     private List<View> progressDots;
 
-    private CountDownTimer roundTimer;
-    private int currentQuestionIndex = 0;
-    private int roundScore = 0;
-    private boolean acceptingInput = true;
-    private boolean roundEnded = false;
+    private CountDownTimer questionTimer;
+    private int renderedQuestionIndex = -1;
+    private boolean initializing = false;
+    private boolean advancing = false;
 
     public QuizFragment() {
         super(R.layout.fragment_quiz);
@@ -95,26 +80,27 @@ public class QuizFragment extends Fragment {
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_quiz, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         vm = new ViewModelProvider(requireActivity()).get(GameViewModel.class);
-        gameId     = getArguments() != null ? getArguments().getString("gameId")     : null;
+        gameId = getArguments() != null ? getArguments().getString("gameId") : null;
         myUsername = getArguments() != null ? getArguments().getString("myUsername") : null;
-        int roundNumber = getArguments() != null ? getArguments().getInt("roundNumber", 1) : 1;
 
-        tvTimer           = view.findViewById(R.id.tvQuizTimer);
+        tvTimer = view.findViewById(R.id.tvQuizTimer);
         tvQuestionCounter = view.findViewById(R.id.tvQuizQuestionCounter);
-        tvQuestion        = view.findViewById(R.id.tvQuizQuestion);
-        layoutAnswers     = view.findViewById(R.id.layoutQuizAnswers);
-        tvResult          = view.findViewById(R.id.tvQuizResult);
-        tvPlayerOneScore  = view.findViewById(R.id.tvPlayerOneScore);
+        tvQuestion = view.findViewById(R.id.tvQuizQuestion);
+        layoutAnswers = view.findViewById(R.id.layoutQuizAnswers);
+        tvResult = view.findViewById(R.id.tvQuizResult);
+        tvPlayerOneScore = view.findViewById(R.id.tvPlayerOneScore);
+        tvPlayerTwoScore = view.findViewById(R.id.tvPlayerTwoScore);
 
         TextView tvSubtitle = view.findViewById(R.id.tvQuizSubtitle);
-        if (tvSubtitle != null) tvSubtitle.setText("Runda " + roundNumber + "/2  •  5 brzih pitanja");
+        if (tvSubtitle != null) tvSubtitle.setText("5 pitanja, 5 sekundi po pitanju");
 
         progressDots = new ArrayList<>(5);
         progressDots.add(view.findViewById(R.id.progressDot1));
@@ -123,8 +109,7 @@ public class QuizFragment extends Fragment {
         progressDots.add(view.findViewById(R.id.progressDot4));
         progressDots.add(view.findViewById(R.id.progressDot5));
 
-        startRoundTimer();
-        bindQuestion();
+        vm.gameRoom.observe(getViewLifecycleOwner(), this::onRoomUpdated);
     }
 
     @Override
@@ -133,144 +118,223 @@ public class QuizFragment extends Fragment {
         stopTimer();
     }
 
-    private void startRoundTimer() {
-        tvTimer.setText(getString(R.string.quiz_timer_seconds, ROUND_DURATION_MS / 1000));
-        roundTimer = new CountDownTimer(ROUND_DURATION_MS, 1_000L) {
-            @Override
-            public void onTick(long ms) {
-                tvTimer.setText(getString(R.string.quiz_timer_seconds, ms / 1_000L));
-            }
+    private void onRoomUpdated(GameRoom room) {
+        if (room == null || !"quiz".equals(room.getCurrentMinigameType())) return;
 
-            @Override
-            public void onFinish() {
-                tvTimer.setText(getString(R.string.quiz_timer_seconds, 0));
-                endRound();
-            }
-        };
-        roundTimer.start();
-    }
+        tvPlayerOneScore.setText(String.valueOf(room.getPlayerOneRoundScore()));
+        tvPlayerTwoScore.setText(String.valueOf(room.getPlayerTwoRoundScore()));
 
-    private void stopTimer() {
-        if (roundTimer != null) {
-            roundTimer.cancel();
-            roundTimer = null;
-        }
-    }
-
-    private void bindQuestion() {
-        if (currentQuestionIndex >= questions.size()) {
-            endRound();
+        if ("MINIGAME_DONE".equals(room.getRoundPhase())) {
+            showFinished(room);
             return;
         }
 
-        QuizQuestion question = questions.get(currentQuestionIndex);
-        tvQuestionCounter.setText(getString(R.string.quiz_question_counter, currentQuestionIndex + 1, questions.size()));
-        tvQuestion.setText(question.prompt);
-        tvResult.setVisibility(View.GONE);
-        updateProgressDots();
-        buildAnswerButtons(question);
-        acceptingInput = true;
+        if (room.getQuizQuestionStartedAt() == 0 && isPlayerOne(room) && !initializing) {
+            initializing = true;
+            startQuestion(0);
+            return;
+        }
+
+        int index = room.getQuizQuestionIndex();
+        if (index >= questions.size()) {
+            showFinished(room);
+            return;
+        }
+
+        if (index != renderedQuestionIndex) {
+            renderedQuestionIndex = index;
+            bindQuestion(room, index);
+        }
+
+        boolean myAnswered = isPlayerOne(room)
+                ? Boolean.TRUE.equals(room.getQuizP1Answered())
+                : Boolean.TRUE.equals(room.getQuizP2Answered());
+        setButtonsEnabled(!myAnswered);
+        updateResultText(room, myAnswered);
+        startTimerFor(room);
+
+        boolean bothAnswered = Boolean.TRUE.equals(room.getQuizP1Answered())
+                && Boolean.TRUE.equals(room.getQuizP2Answered());
+        long remaining = room.getQuizQuestionStartedAt() + QUESTION_DURATION_MS - System.currentTimeMillis();
+        if (isPlayerOne(room) && !advancing && (bothAnswered || remaining <= 0)) {
+            advancing = true;
+            tvTimer.postDelayed(() -> advanceQuestion(room), bothAnswered ? 700L : 0L);
+        }
     }
 
-    private void buildAnswerButtons(QuizQuestion question) {
+    private void bindQuestion(GameRoom room, int index) {
+        QuizQuestion question = questions.get(index);
+        tvQuestionCounter.setText("Pitanje " + (index + 1) + "/" + questions.size());
+        tvQuestion.setText(question.prompt);
+        tvResult.setVisibility(View.GONE);
+        updateProgressDots(index);
+        buildAnswerButtons(room, question);
+    }
+
+    private void buildAnswerButtons(GameRoom room, QuizQuestion question) {
         layoutAnswers.removeAllViews();
         for (int i = 0; i < question.answers.size(); i++) {
-            MaterialButton btn = new MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            MaterialButton btn = new MaterialButton(requireContext(), null,
+                    com.google.android.material.R.attr.materialButtonOutlinedStyle);
             btn.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             btn.setText(question.answers.get(i));
             btn.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.quiz_button_stroke)));
             btn.setStrokeWidth(2);
-            btn.setCornerRadius(28);
+            btn.setCornerRadius(18);
             btn.setRippleColor(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.quiz_button_ripple)));
             btn.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             final int idx = i;
-            btn.setOnClickListener(v -> evaluateAnswer(btn, idx));
+            btn.setOnClickListener(v -> submitAnswer(room, idx));
             layoutAnswers.addView(btn);
         }
     }
 
-    private void evaluateAnswer(MaterialButton selected, int selectedIndex) {
-        if (!acceptingInput) return;
-        acceptingInput = false;
+    private void submitAnswer(GameRoom room, int selectedIndex) {
+        boolean p1 = isPlayerOne(room);
+        boolean alreadyAnswered = p1
+                ? Boolean.TRUE.equals(room.getQuizP1Answered())
+                : Boolean.TRUE.equals(room.getQuizP2Answered());
+        if (alreadyAnswered || room.getQuizQuestionIndex() >= questions.size()) return;
 
-        QuizQuestion question = questions.get(currentQuestionIndex);
-        boolean isCorrect = selectedIndex == question.correctIndex;
+        QuizQuestion question = questions.get(room.getQuizQuestionIndex());
+        boolean correct = selectedIndex == question.correctIndex;
+        int delta = correct ? (Boolean.TRUE.equals(room.getQuizCorrectClaimed()) ? 0 : 10) : -5;
 
-        highlightAnswers(question.correctIndex, selectedIndex);
-
-        int delta = isCorrect ? 10 : -5;
-        roundScore += delta;
-        tvPlayerOneScore.setText(String.valueOf(roundScore));
+        Map<String, Object> updates = new HashMap<>();
+        if (p1) {
+            updates.put("quizP1Answered", true);
+            updates.put("quizP1Correct", correct);
+            updates.put("playerOneRoundScore", room.getPlayerOneRoundScore() + delta);
+            updates.put("playerOneScore", room.getPlayerOneScore() + delta);
+        } else {
+            updates.put("quizP2Answered", true);
+            updates.put("quizP2Correct", correct);
+            updates.put("playerTwoRoundScore", room.getPlayerTwoRoundScore() + delta);
+            updates.put("playerTwoScore", room.getPlayerTwoScore() + delta);
+        }
+        if (correct && !Boolean.TRUE.equals(room.getQuizCorrectClaimed())) {
+            updates.put("quizCorrectClaimed", true);
+        }
 
         tvResult.setVisibility(View.VISIBLE);
-        if (isCorrect) {
-            tvResult.setText(getString(R.string.quiz_correct_feedback, delta));
+        if (correct && delta > 0) {
+            tvResult.setText("Tacno! +10");
             tvResult.setTextColor(0xFF15803D);
+        } else if (correct) {
+            tvResult.setText("Tacno, ali protivnik je bio brzi. 0");
+            tvResult.setTextColor(0xFF475569);
         } else {
-            tvResult.setText(getString(R.string.quiz_incorrect_feedback, delta));
+            tvResult.setText("Netacno. -5");
             tvResult.setTextColor(0xFFDC2626);
         }
-
-        selected.postDelayed(() -> {
-            if(!isAdded()) return;
-            currentQuestionIndex++;
-            bindQuestion();
-        }, 800);
+        setButtonsEnabled(false);
+        vm.advancePhase(gameId, updates);
     }
 
-    private void highlightAnswers(int correctIndex, int selectedIndex) {
-        for (int i = 0; i < layoutAnswers.getChildCount(); i++) {
-            View child = layoutAnswers.getChildAt(i);
-            if (!(child instanceof MaterialButton)) continue;
-            MaterialButton btn = (MaterialButton) child;
-            if (i == correctIndex) {
-                btn.setBackgroundTintList(ColorStateList.valueOf(0xFF15803D));
-                btn.setTextColor(0xFFFFFFFF);
-            } else if (i == selectedIndex) {
-                btn.setBackgroundTintList(ColorStateList.valueOf(0xFFDC2626));
-                btn.setTextColor(0xFFFFFFFF);
-            } else {
-                btn.setBackgroundTintList(ColorStateList.valueOf(0xFFFFFFFF));
-                btn.setTextColor(0xFF1E293B);
+    private void startQuestion(int index) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("quizQuestionIndex", index);
+        updates.put("quizQuestionStartedAt", System.currentTimeMillis());
+        updates.put("quizP1Answered", false);
+        updates.put("quizP2Answered", false);
+        updates.put("quizP1Correct", false);
+        updates.put("quizP2Correct", false);
+        updates.put("quizCorrectClaimed", false);
+        if (index == 0) {
+            updates.put("playerOneRoundScore", 0);
+            updates.put("playerTwoRoundScore", 0);
+        }
+        vm.advancePhase(gameId, updates);
+    }
+
+    private void advanceQuestion(GameRoom room) {
+        if (!isAdded()) return;
+        int next = room.getQuizQuestionIndex() + 1;
+        Map<String, Object> updates = new HashMap<>();
+        if (next >= questions.size()) {
+            updates.put("roundPhase", "MINIGAME_DONE");
+            updates.put("quizQuestionStartedAt", 0);
+        } else {
+            updates.put("quizQuestionIndex", next);
+            updates.put("quizQuestionStartedAt", System.currentTimeMillis());
+            updates.put("quizP1Answered", false);
+            updates.put("quizP2Answered", false);
+            updates.put("quizP1Correct", false);
+            updates.put("quizP2Correct", false);
+            updates.put("quizCorrectClaimed", false);
+        }
+        advancing = false;
+        initializing = false;
+        vm.advancePhase(gameId, updates);
+    }
+
+    private void startTimerFor(GameRoom room) {
+        long remaining = Math.max(0, room.getQuizQuestionStartedAt() + QUESTION_DURATION_MS - System.currentTimeMillis());
+        stopTimer();
+        tvTimer.setText((remaining / 1000) + "s");
+        questionTimer = new CountDownTimer(remaining, 250L) {
+            @Override
+            public void onTick(long ms) {
+                if (isAdded()) tvTimer.setText((ms / 1000) + "s");
             }
-            btn.setEnabled(false);
+
+            @Override
+            public void onFinish() {
+                if (isAdded()) tvTimer.setText("0s");
+            }
+        }.start();
+    }
+
+    private void stopTimer() {
+        if (questionTimer != null) {
+            questionTimer.cancel();
+            questionTimer = null;
         }
     }
 
-    private void updateProgressDots() {
+    private void updateProgressDots(int activeIndex) {
         for (int i = 0; i < progressDots.size(); i++) {
             progressDots.get(i).setBackground(ContextCompat.getDrawable(requireContext(),
-                    i == currentQuestionIndex
+                    i == activeIndex
                             ? R.drawable.bg_quiz_progress_active
                             : R.drawable.bg_quiz_progress_inactive));
         }
     }
 
-    private void endRound() {
-        if (roundEnded) return;
-        roundEnded = true;
-        stopTimer();
-        acceptingInput = false;
-
-        layoutAnswers.removeAllViews();
-        tvQuestionCounter.setText(R.string.quiz_finished_counter);
-        tvQuestion.setText(R.string.quiz_finished_title);
+    private void updateResultText(GameRoom room, boolean myAnswered) {
+        if (!myAnswered) {
+            tvResult.setVisibility(View.GONE);
+            return;
+        }
+        boolean correct = isPlayerOne(room)
+                ? Boolean.TRUE.equals(room.getQuizP1Correct())
+                : Boolean.TRUE.equals(room.getQuizP2Correct());
         tvResult.setVisibility(View.VISIBLE);
-        tvResult.setText(getString(R.string.quiz_summary_template, roundScore));
+        tvResult.setText(correct ? "Odgovor je zabelezen." : "Netacan odgovor je zabelezen.");
+        tvResult.setTextColor(correct ? 0xFF15803D : 0xFFDC2626);
+    }
+
+    private void showFinished(GameRoom room) {
+        stopTimer();
+        setButtonsEnabled(false);
+        layoutAnswers.removeAllViews();
+        tvQuestionCounter.setText("Ko zna zna");
+        tvQuestion.setText("Runda zavrsena!");
+        tvResult.setVisibility(View.VISIBLE);
+        boolean p1 = isPlayerOne(room);
+        int score = p1 ? room.getPlayerOneRoundScore() : room.getPlayerTwoRoundScore();
+        tvResult.setText("Tvoj skor: " + score + " bodova");
         tvResult.setTextColor(0xFF0F172A);
+    }
 
-        for (View dot : progressDots) {
-            dot.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.bg_quiz_progress_inactive));
+    private void setButtonsEnabled(boolean enabled) {
+        for (int i = 0; i < layoutAnswers.getChildCount(); i++) {
+            layoutAnswers.getChildAt(i).setEnabled(enabled);
         }
+    }
 
-
-        GameRoom room = vm.gameRoom.getValue();
-        if (gameId != null && room != null && myUsername != null
-                && myUsername.equals(room.getPlayerOne())) {
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("roundPhase", "MINIGAME_DONE");
-            vm.advancePhase(gameId, updates);
-        }
+    private boolean isPlayerOne(GameRoom room) {
+        return myUsername != null && myUsername.equals(room.getPlayerOne());
     }
 }

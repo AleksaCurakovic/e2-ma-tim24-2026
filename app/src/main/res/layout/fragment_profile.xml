@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="#F5F7FB">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,163 +14,133 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:padding="16dp">
 
                 <ImageView
                     android:id="@+id/ivProfileAvatar"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:src="@drawable/friends"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
                     android:background="@drawable/empty"
-                    android:padding="4dp"
-                    android:contentDescription="User Avatar" />
+                    android:contentDescription="Avatar korisnika"
+                    android:padding="6dp"
+                    android:src="@drawable/friends" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:paddingStart="12dp"
-                    tools:ignore="RtlSymmetry">
+                    android:paddingStart="14dp">
 
                     <TextView
                         android:id="@+id/tvProfileUsername"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        tools:text="Korisnicko ime"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
+                        android:textColor="#172033"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvProfileEmail"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        tools:text="email@example.com"
-                        android:textSize="13sp"
-                        android:textColor="#666"/>
+                        android:layout_marginTop="4dp"
+                        android:textColor="#64748B"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/tvProfileRegion"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="#334155"
+                        android:textSize="14sp" />
                 </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:orientation="vertical">
 
                     <ImageView
                         android:id="@+id/ivProfileLeagueIcon"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:src="@drawable/league0"
-                        android:contentDescription="League Icon" />
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:contentDescription="Ikona lige"
+                        android:src="@drawable/league0" />
 
                     <TextView
                         android:id="@+id/tvProfileLeague"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        tools:text="Liga"
-                        android:textSize="12sp"
-                        android:textColor="#333"/>
+                        android:layout_marginTop="4dp"
+                        android:textColor="#334155"
+                        android:textSize="12sp" />
                 </LinearLayout>
-
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:text="Stanje naloga"
+                    android:textColor="#172033"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/tvProfileTokens"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center_horizontal"
-                        android:padding="8dp">
+                        android:background="#E0F2FE"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:textColor="#075985"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Tokeni"
-                            android:textColor="#666"
-                            android:textSize="12sp"/>
-                        <TextView
-                            android:id="@+id/tvProfileTokens"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            tools:text="0"
-                            android:textStyle="bold"
-                            android:textSize="18sp"/>
-                    </LinearLayout>
-
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/tvProfileStars"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
                         android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center_horizontal"
-                        android:padding="8dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Zbezde"
-                            android:textColor="#666"
-                            android:textSize="12sp"/>
-                        <TextView
-                            android:id="@+id/tvProfileStars"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            tools:text="0"
-                            android:textStyle="bold"
-                            android:textSize="18sp"/>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center_horizontal"
-                        android:padding="8dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Region"
-                            android:textColor="#666"
-                            android:textSize="12sp"/>
-                        <TextView
-                            android:id="@+id/tvProfileRegion"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            tools:text="Region"
-                            android:textStyle="bold"
-                            android:textSize="18sp"/>
-                    </LinearLayout>
-
+                        android:background="#FEF3C7"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:textColor="#92400E"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -179,40 +148,100 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center"
                 android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Friend QR"
-                    android:textStyle="bold"
-                    android:textColor="#333"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="10dp"
+                    android:text="Izmena avatara"
+                    android:textColor="#172033"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
-                <ImageView
-                    android:id="@+id/ivProfileQr"
-                    android:layout_width="160dp"
-                    android:layout_height="160dp"
-                    android:src="@drawable/notification"
-                    android:contentDescription="QR Code" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
+                    <ImageButton
+                        android:id="@+id/btnAvatarFriends"
+                        android:layout_width="54dp"
+                        android:layout_height="54dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Avatar prijatelji"
+                        android:padding="8dp"
+                        android:src="@drawable/friends" />
+
+                    <ImageButton
+                        android:id="@+id/btnAvatarBusiness"
+                        android:layout_width="54dp"
+                        android:layout_height="54dp"
+                        android:layout_marginStart="12dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Avatar posao"
+                        android:padding="8dp"
+                        android:src="@drawable/business" />
+
+                    <ImageButton
+                        android:id="@+id/btnAvatarStar"
+                        android:layout_width="54dp"
+                        android:layout_height="54dp"
+                        android:layout_marginStart="12dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Avatar zvezda"
+                        android:padding="8dp"
+                        android:src="@drawable/star" />
+                </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="QR kod za prijatelje"
+                    android:textColor="#172033"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/ivProfileQr"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:contentDescription="QR kod"
+                    android:src="@drawable/notification" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -223,71 +252,139 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:text="Statistika"
+                    android:textColor="#172033"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvStatsGames"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#334155"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvStatsWinLoss"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="#334155"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvStatsQuiz"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="#334155"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvStatsSpojnice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="#334155"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvStatsAsocijacije"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="#334155"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
                     android:text="Promeni sifru"
-                    android:textStyle="bold"
-                    android:textSize="15sp"
-                    android:textColor="#333"
-                    android:layout_marginBottom="12dp"/>
+                    android:textColor="#172033"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilOldPassword"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:hint="Trenutna sifra"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    app:passwordToggleEnabled="true"
-                    android:layout_marginBottom="8dp">
+                    app:passwordToggleEnabled="true">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etOldPassword"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
-                        android:singleLine="true"/>
+                        android:singleLine="true" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilNewPassword"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:hint="Nova sifra"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    app:passwordToggleEnabled="true"
-                    android:layout_marginBottom="8dp">
+                    app:passwordToggleEnabled="true">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etNewPassword"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
-                        android:singleLine="true"/>
+                        android:singleLine="true" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilConfirmPassword"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
                     android:hint="Potvrdi novu sifru"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    app:passwordToggleEnabled="true"
-                    android:layout_marginBottom="12dp">
+                    app:passwordToggleEnabled="true">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etConfirmPassword"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
-                        android:singleLine="true"/>
+                        android:singleLine="true" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <Button
                     android:id="@+id/btnChangePassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Promeni sifru"/>
-
+                    android:text="Promeni sifru" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:text="Logout" />
     </LinearLayout>
 </ScrollView>
