@@ -1,10 +1,12 @@
 package com.example.myapplication.presentation.fragments;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.TextView;
@@ -70,10 +72,20 @@ public class AsocijacijeFragment extends Fragment {
     private String myUsername;
     private TextView tvTimer;
     private TextView tvStatus;
+    private TextView tvScore;
     private GridLayout grid;
     private EditText etGuess;
+    private Button btnGuessA;
+    private Button btnGuessB;
+    private Button btnGuessC;
+    private Button btnGuessD;
+    private Button btnGuessFinal;
+    private Button btnSubmitGuess;
     private CountDownTimer roundTimer;
     private boolean finishing = false;
+    private int selectedGuessTarget = -1;
+    private String activeTurnPlayer = null;
+    private boolean openedCellThisTurn = false;
 
     public AsocijacijeFragment() {
         super(R.layout.fragment_asocijacije);
@@ -94,14 +106,22 @@ public class AsocijacijeFragment extends Fragment {
 
         tvTimer = view.findViewById(R.id.tvAsocTimer);
         tvStatus = view.findViewById(R.id.tvAsocStatus);
+        tvScore = view.findViewById(R.id.tvAsocScore);
         grid = view.findViewById(R.id.gridAsoc);
         etGuess = view.findViewById(R.id.etAsocGuess);
+        btnGuessA = view.findViewById(R.id.btnGuessA);
+        btnGuessB = view.findViewById(R.id.btnGuessB);
+        btnGuessC = view.findViewById(R.id.btnGuessC);
+        btnGuessD = view.findViewById(R.id.btnGuessD);
+        btnGuessFinal = view.findViewById(R.id.btnGuessFinal);
+        btnSubmitGuess = view.findViewById(R.id.btnSubmitAsocGuess);
 
-        view.findViewById(R.id.btnGuessA).setOnClickListener(v -> submitColumnGuess(0));
-        view.findViewById(R.id.btnGuessB).setOnClickListener(v -> submitColumnGuess(1));
-        view.findViewById(R.id.btnGuessC).setOnClickListener(v -> submitColumnGuess(2));
-        view.findViewById(R.id.btnGuessD).setOnClickListener(v -> submitColumnGuess(3));
-        view.findViewById(R.id.btnGuessFinal).setOnClickListener(v -> submitFinalGuess());
+        btnGuessA.setOnClickListener(v -> selectGuessTarget(0));
+        btnGuessB.setOnClickListener(v -> selectGuessTarget(1));
+        btnGuessC.setOnClickListener(v -> selectGuessTarget(2));
+        btnGuessD.setOnClickListener(v -> selectGuessTarget(3));
+        btnGuessFinal.setOnClickListener(v -> selectGuessTarget(4));
+        btnSubmitGuess.setOnClickListener(v -> submitSelectedGuess());
 
         vm.gameRoom.observe(getViewLifecycleOwner(), this::onRoomUpdated);
     }
@@ -123,8 +143,16 @@ public class AsocijacijeFragment extends Fragment {
             return;
         }
 
+        if (room.getAsocTurnPlayer() != null && !room.getAsocTurnPlayer().equals(activeTurnPlayer)) {
+            activeTurnPlayer = room.getAsocTurnPlayer();
+            openedCellThisTurn = false;
+            selectedGuessTarget = -1;
+        }
+
         renderBoard(room);
         renderStatus(room);
+        renderScore(room);
+        renderGuessButtons(room);
         startTimer(room);
     }
 
@@ -145,10 +173,12 @@ public class AsocijacijeFragment extends Fragment {
                 btn.setText(visible ? set.hints[col][row] : COLUMN_IDS[col] + (row + 1));
                 btn.setTextSize(13f);
                 btn.setAllCaps(false);
-                btn.setEnabled(isMyTurn(room) && !visible && !solved.contains(COLUMN_IDS[col]) && !finalSolved);
+                btn.setEnabled(isMyTurn(room) && !openedCellThisTurn && !visible
+                        && !solved.contains(COLUMN_IDS[col]) && !finalSolved);
                 btn.setOnClickListener(v -> openCell(room, cellIndex));
                 btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        visible ? 0xFFFFFFFF : 0xFFE0F2FE));
+                        visible ? 0xFFDBEAFE : 0xFF1D4ED8));
+                btn.setTextColor(visible ? 0xFF0F172A : 0xFFFFFFFF);
                 addGridView(btn);
             }
         }
@@ -168,14 +198,31 @@ public class AsocijacijeFragment extends Fragment {
     }
 
     private void openCell(GameRoom room, int cellIndex) {
-        if (!isMyTurn(room)) return;
+        if (!isMyTurn(room) || openedCellThisTurn) return;
         List<Integer> opened = safeIntegers(room.getAsocOpenedCells());
         if (!opened.contains(cellIndex)) opened.add(cellIndex);
 
+        openedCellThisTurn = true;
         Map<String, Object> updates = new HashMap<>();
         updates.put("asocOpenedCells", opened);
-        updates.put("asocTurnPlayer", otherPlayer(room));
         vm.advancePhase(gameId, updates);
+    }
+
+    private void selectGuessTarget(int target) {
+        selectedGuessTarget = target;
+        renderGuessButtons(vm.gameRoom.getValue());
+    }
+
+    private void submitSelectedGuess() {
+        if (selectedGuessTarget < 0) {
+            tvStatus.setText("Prvo izaberi sta pogadjas.");
+            return;
+        }
+        if (selectedGuessTarget == 4) {
+            submitFinalGuess();
+        } else {
+            submitColumnGuess(selectedGuessTarget);
+        }
     }
 
     private void submitColumnGuess(int col) {
@@ -200,6 +247,7 @@ public class AsocijacijeFragment extends Fragment {
             tvStatus.setText("Nije tacno. Protivnik je na potezu.");
         }
 
+        selectedGuessTarget = -1;
         etGuess.setText("");
         vm.advancePhase(gameId, updates);
     }
@@ -224,6 +272,7 @@ public class AsocijacijeFragment extends Fragment {
             tvStatus.setText("Nije tacno. Protivnik je na potezu.");
         }
 
+        selectedGuessTarget = -1;
         etGuess.setText("");
         vm.advancePhase(gameId, updates);
     }
@@ -316,6 +365,30 @@ public class AsocijacijeFragment extends Fragment {
         } else {
             tvStatus.setText("Asocijacije - runda " + round + ". Igra " + room.getAsocTurnPlayer());
         }
+    }
+
+    private void renderScore(GameRoom room) {
+        boolean p1 = myUsername != null && myUsername.equals(room.getPlayerOne());
+        int total = p1 ? room.getPlayerOneScore() : room.getPlayerTwoScore();
+        int round = p1 ? room.getPlayerOneRoundScore() : room.getPlayerTwoRoundScore();
+        tvScore.setText("Bodovi: " + total + "  |  Runda: +" + round);
+    }
+
+    private void renderGuessButtons(GameRoom room) {
+        boolean enabled = room != null && isMyTurn(room) && !Boolean.TRUE.equals(room.getAsocFinalSolved());
+        styleGuessButton(btnGuessA, 0, enabled);
+        styleGuessButton(btnGuessB, 1, enabled);
+        styleGuessButton(btnGuessC, 2, enabled);
+        styleGuessButton(btnGuessD, 3, enabled);
+        styleGuessButton(btnGuessFinal, 4, enabled);
+        btnSubmitGuess.setEnabled(enabled);
+    }
+
+    private void styleGuessButton(Button button, int target, boolean enabled) {
+        boolean selected = selectedGuessTarget == target;
+        button.setEnabled(enabled);
+        button.setTextColor(selected ? 0xFFFFFFFF : 0xFF0F172A);
+        button.setBackgroundTintList(ColorStateList.valueOf(selected ? 0xFF1D4ED8 : 0xFFE0F2FE));
     }
 
     private AssociationSet currentSet(GameRoom room) {

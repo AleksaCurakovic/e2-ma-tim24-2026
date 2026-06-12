@@ -5,6 +5,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -38,8 +40,15 @@ public class GameFragment extends Fragment {
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable resultsRunnable;
     private int roundsPlayed = 0;
+    private boolean waitingForAdvance = false;
 
     private FrameLayout layoutGame;
+    private LinearLayout layoutResults;
+    private TextView tvRoundScoreOne;
+    private TextView tvRoundScoreTwo;
+    private TextView tvRoundLabelOne;
+    private TextView tvRoundLabelTwo;
+    private TextView tvCountdown;
 
     public GameFragment() {
         super(R.layout.fragment_game);
@@ -60,6 +69,12 @@ public class GameFragment extends Fragment {
 
     private void initializeViews(View view) {
         layoutGame = view.findViewById(R.id.layoutGame);
+        layoutResults = view.findViewById(R.id.layoutResults);
+        tvRoundScoreOne = view.findViewById(R.id.tvRoundScoreOne);
+        tvRoundScoreTwo = view.findViewById(R.id.tvRoundScoreTwo);
+        tvRoundLabelOne = view.findViewById(R.id.tvRoundLabelOne);
+        tvRoundLabelTwo = view.findViewById(R.id.tvRoundLabelTwo);
+        tvCountdown = view.findViewById(R.id.tvCountdown);
     }
 
     private void observeGameRoom(View view) {
@@ -77,6 +92,9 @@ public class GameFragment extends Fragment {
 
             String phase = room.getRoundPhase();
             if ("MINIGAME_DONE".equals(phase)) {
+                if (waitingForAdvance) return;
+                waitingForAdvance = true;
+                showMiniGameSummary(room);
                 roundsPlayed++;
                 if (roundsPlayed >= roundsFor(room.getCurrentMinigameType())) {
                     roundsPlayed = 0;
@@ -86,6 +104,8 @@ public class GameFragment extends Fragment {
                     scheduleNextRound();
                 }
             } else {
+                waitingForAdvance = false;
+                layoutResults.setVisibility(View.GONE);
                 layoutGame.setVisibility(View.VISIBLE);
 
                 String minigameType = room.getCurrentMinigameType();
@@ -123,6 +143,7 @@ public class GameFragment extends Fragment {
             minigameFragment.setArguments(args);
 
             getChildFragmentManager().beginTransaction()
+                    .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
                     .replace(R.id.layoutGame, minigameFragment)
                     .commit();
         } catch (Exception e) {
@@ -144,7 +165,7 @@ public class GameFragment extends Fragment {
                 vm.advancePhase(gameId, updates);
             }
         };
-        handler.postDelayed(resultsRunnable, 1500);
+        handler.postDelayed(resultsRunnable, 2500);
     }
 
     private void scheduleAdvance() {
@@ -157,7 +178,17 @@ public class GameFragment extends Fragment {
                 advanceToNextRound(current);
             }
         };
-        handler.postDelayed(resultsRunnable, 2000);
+        handler.postDelayed(resultsRunnable, 3500);
+    }
+
+    private void showMiniGameSummary(GameRoom room) {
+        layoutGame.setVisibility(View.GONE);
+        layoutResults.setVisibility(View.VISIBLE);
+        tvRoundScoreOne.setText("+" + room.getPlayerOneRoundScore());
+        tvRoundScoreTwo.setText("+" + room.getPlayerTwoRoundScore());
+        tvRoundLabelOne.setText(room.getPlayerOne());
+        tvRoundLabelTwo.setText(room.getPlayerTwo());
+        tvCountdown.setText("Sledeca igra uskoro...");
     }
 
     private void advanceToNextRound(GameRoom room) {

@@ -11,6 +11,7 @@ import java.util.Map;
 public class GameService {
 
     private final GameRepository repository;
+    private boolean matchmakingResolved = false;
 
     public GameService(GameRepository repository) {
         this.repository = repository;
@@ -18,11 +19,14 @@ public class GameService {
     public void startMatchmaking(String username,
                                  OnSuccessListener<String> onNavigateToGame,
                                  OnFailureListener onFailure) {
+        matchmakingResolved = false;
         repository.findOrPostRequest(username, result -> {
+            if (matchmakingResolved) return;
             if (result.type == GameRepository.PathResult.Type.JOINED) {
+                matchmakingResolved = true;
                 handleJoinerPath(result.gameId, onNavigateToGame, onFailure);
             } else {
-                handleCreatorPath(result.requestDocId, username, onNavigateToGame, onFailure);
+                handleCreatorPath(result.requestDocId, result.createdAt, username, onNavigateToGame, onFailure);
             }
         }, onFailure);
     }
@@ -38,16 +42,24 @@ public class GameService {
         }, onFailure);
     }
 
-    private void handleCreatorPath(String requestDocId, String creatorName,
+    private void handleCreatorPath(String requestDocId, long createdAt, String creatorName,
                                    OnSuccessListener<String> onNavigateToGame,
                                    OnFailureListener onFailure) {
         repository.listenToOwnRequest(requestDocId, acceptedRequest -> {
+            if (matchmakingResolved) return;
+            matchmakingResolved = true;
             repository.detachMatchmakingListeners(); // keep game room listener alive
 
             String gameId    = acceptedRequest.getGameId();
             String joinerName = acceptedRequest.getJoinerName();
 
             buildGameRoom(gameId, creatorName, joinerName, requestDocId, onNavigateToGame, onFailure);
+        }, onFailure);
+
+        repository.listenForOlderRequest(requestDocId, createdAt, creatorName, joinedResult -> {
+            if (matchmakingResolved) return;
+            matchmakingResolved = true;
+            handleJoinerPath(joinedResult.gameId, onNavigateToGame, onFailure);
         }, onFailure);
     }
 

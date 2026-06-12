@@ -10,7 +10,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -21,7 +20,6 @@ import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +37,7 @@ public class SpojniceFragment extends Fragment {
     private String myUsername;
     private TextView tvTimer;
     private TextView tvResult;
+    private TextView tvScore;
     private GridLayout gridLeft;
     private GridLayout gridRight;
     private CountDownTimer phaseTimer;
@@ -65,6 +64,7 @@ public class SpojniceFragment extends Fragment {
 
         tvTimer = view.findViewById(R.id.tvSpojniceTimer);
         tvResult = view.findViewById(R.id.tvSpojniceResult);
+        tvScore = view.findViewById(R.id.tvSpojniceScore);
         gridLeft = view.findViewById(R.id.gridLeft);
         gridRight = view.findViewById(R.id.gridRight);
 
@@ -82,6 +82,7 @@ public class SpojniceFragment extends Fragment {
 
         loadRoundData(room.getSpojniceRoundIndex());
         render(room);
+        updateScore(room);
 
         boolean active = isActivePlayer(room);
         if (!room.getRoundPhase().equals(activePhase)) {
@@ -114,6 +115,13 @@ public class SpojniceFragment extends Fragment {
             pairs.put("ABBA", "Dancing Queen");
             pairs.put("The Beatles", "Hey Jude");
             pairs.put("Nirvana", "Smells Like Teen Spirit");
+            right.addAll(Arrays.asList(
+                    "Hey Jude",
+                    "Dancing Queen",
+                    "Smells Like Teen Spirit",
+                    "Bohemian Rhapsody",
+                    "Nothing Else Matters"
+            ));
         } else {
             left.addAll(Arrays.asList("Srbija", "Francuska", "Japan", "Brazil", "Egipat"));
             pairs.put("Srbija", "Beograd");
@@ -121,10 +129,8 @@ public class SpojniceFragment extends Fragment {
             pairs.put("Japan", "Tokio");
             pairs.put("Brazil", "Brazilija");
             pairs.put("Egipat", "Kairo");
+            right.addAll(Arrays.asList("Tokio", "Kairo", "Beograd", "Brazilija", "Pariz"));
         }
-
-        for (String item : left) right.add(pairs.get(item));
-        Collections.shuffle(right);
     }
 
     private void render(GameRoom room) {
@@ -144,6 +150,7 @@ public class SpojniceFragment extends Fragment {
             tv.setText(text);
 
             boolean disabled = false;
+            boolean selected = isLeft && text.equals(pendingLeft);
             if (isLeft) {
                 disabled = solved.contains(text) || attempted.contains(text);
             } else {
@@ -151,10 +158,12 @@ public class SpojniceFragment extends Fragment {
             }
 
             if (disabled) {
-                card.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.skocko_absent));
+                card.setCardBackgroundColor(0xFFCBD5E1);
+                tv.setTextColor(0xFF334155);
                 card.setEnabled(false);
             } else {
-                card.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.skocko_cell_filled));
+                card.setCardBackgroundColor(selected ? 0xFF1D4ED8 : 0xFFFFFFFF);
+                tv.setTextColor(selected ? 0xFFFFFFFF : 0xFF0F172A);
                 card.setEnabled(isActivePlayer(room));
                 card.setOnClickListener(v -> onCardClicked(text, isLeft, room));
             }
@@ -174,6 +183,7 @@ public class SpojniceFragment extends Fragment {
         if (isLeft) {
             pendingLeft = text;
             tvResult.setText("Izabrano: " + text);
+            render(room);
             return;
         }
 
@@ -240,11 +250,17 @@ public class SpojniceFragment extends Fragment {
                 startSecondRound(updates);
             } else {
                 updates.put("roundPhase", "P2_BONUS");
+                updates.put("spojniceAttemptedLeft", new ArrayList<String>());
             }
         } else if ("P2_BONUS".equals(phase)) {
             startSecondRound(updates);
         } else if ("P2_TURN".equals(phase)) {
-            updates.put("roundPhase", allSolved ? "MINIGAME_DONE" : "P1_BONUS");
+            if (allSolved) {
+                updates.put("roundPhase", "MINIGAME_DONE");
+            } else {
+                updates.put("roundPhase", "P1_BONUS");
+                updates.put("spojniceAttemptedLeft", new ArrayList<String>());
+            }
         } else {
             updates.put("roundPhase", "MINIGAME_DONE");
         }
@@ -267,6 +283,13 @@ public class SpojniceFragment extends Fragment {
             updates.put("playerTwoRoundScore", room.getPlayerTwoRoundScore() + delta);
             updates.put("playerTwoScore", room.getPlayerTwoScore() + delta);
         }
+    }
+
+    private void updateScore(GameRoom room) {
+        boolean p1 = myUsername != null && myUsername.equals(room.getPlayerOne());
+        int total = p1 ? room.getPlayerOneScore() : room.getPlayerTwoScore();
+        int round = p1 ? room.getPlayerOneRoundScore() : room.getPlayerTwoRoundScore();
+        tvScore.setText("Bodovi: " + total + "  |  Runda: +" + round);
     }
 
     private boolean isActivePlayer(GameRoom room) {
