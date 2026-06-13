@@ -9,6 +9,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Source;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,20 +40,23 @@ public class GameRepository {
     public void findOrPostRequest(String username,
                                   OnSuccessListener<PathResult> onSuccess,
                                   OnFailureListener onFailure) {
+
+        // We still force Source.SERVER to guarantee we do not read a stale local cache.
         db.collection(COL_REQUESTS)
                 .whereEqualTo("accepted", false)
-                .get()
+                .get(Source.SERVER)
                 .addOnSuccessListener(querySnapshot -> {
                     db.runTransaction(transaction -> {
                         List<DocumentSnapshot> available = new ArrayList<>();
-                        long now = System.currentTimeMillis();
+
                         for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                             DocumentSnapshot fresh = transaction.get(doc.getReference());
                             Boolean accepted = fresh.getBoolean("accepted");
                             String creator   = fresh.getString("creatorName");
-                            Long createdAt = fresh.getLong("createdAt");
-                            boolean isFresh = createdAt != null && (now - createdAt) <= REQUEST_TTL_MS;
-                            if (Boolean.FALSE.equals(accepted) && isFresh && !username.equals(creator)) {
+
+                            // Removed all time-checking logic.
+                            // Now we only check if it is unaccepted and not created by ourselves.
+                            if (Boolean.FALSE.equals(accepted) && !username.equals(creator)) {
                                 available.add(fresh);
                             }
                         }
@@ -64,6 +68,7 @@ public class GameRepository {
                             updates.put("accepted", true);
                             updates.put("joinerName", username);
                             transaction.update(chosen.getReference(), updates);
+
                             return new PathResult(
                                     PathResult.Type.JOINED,
                                     chosen.getString("gameId"),
@@ -73,19 +78,20 @@ public class GameRepository {
                             );
                         } else {
                             DocumentReference ref = db.collection(COL_REQUESTS).document();
-                            long createdAt = System.currentTimeMillis();
+                            long createdAtNew = System.currentTimeMillis(); // Kept just for logging/history
                             GameRequest req = new GameRequest(
                                     username,
-                                    createdAt,
+                                    createdAtNew,
                                     UUID.randomUUID().toString()
                             );
                             transaction.set(ref, req);
+
                             return new PathResult(
                                     PathResult.Type.WAITING,
                                     req.getGameId(),
                                     ref.getId(),
                                     null,
-                                    createdAt
+                                    createdAtNew
                             );
                         }
                     }).addOnSuccessListener(onSuccess).addOnFailureListener(onFailure);
@@ -185,16 +191,30 @@ public class GameRepository {
     public void fetchMinigameIds(OnSuccessListener<List<String>> onSuccess,
                                  OnFailureListener onFailure) {
         List<String> playlist = new ArrayList<>();  //biranje docid
-        playlist.add("quiz:local");
-        playlist.add("spojnice:local");
-        playlist.add("asocijacije:local");
+        playlist.add("koZnaZna:MYpnDssGiHQRGFm44Hnl");
+        playlist.add("spojnice:ggkOP2ztg66gPMsvnr2a");
+        playlist.add("asocijacije:RGl9pFhUbmeoF2TYm1UW");
         playlist.add("skocko:4Nu4vTBXWEI4BTKSDpH2");
         playlist.add("korakPoKorak:JikvyEnu1KOMN6ySvCWV");
-        playlist.add("mojbroj:local");
+        playlist.add("mojBroj:local");
         onSuccess.onSuccess(playlist);
     }
 
-
+    public void fetchSpojniceData(String docId,
+                                  com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
+                                  com.google.android.gms.tasks.OnFailureListener onFailure) {
+        db.collection("minigames").document("spojnice")
+                .collection("items").document(docId)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (snap.exists() && snap.getData() != null) {
+                        onSuccess.onSuccess(snap.getData());
+                    } else {
+                        onFailure.onFailure(new Exception("Spojnice podaci nisu pronađeni za ID: " + docId));
+                    }
+                })
+                .addOnFailureListener(onFailure);
+    }
 
     public void createGameRoom(String gameId, String playerOne, String playerTwo,
                                List<String> playlist,
@@ -232,6 +252,22 @@ public class GameRepository {
                         }
                     } else {
                         onFailure.onFailure(new Exception("Rešenje nije pronađeno"));
+                    }
+                })
+                .addOnFailureListener(onFailure);
+    }
+
+    public void fetchKoZnaZnaData(String docId,
+                              OnSuccessListener<Map<String, Object>> onSuccess,
+                              OnFailureListener onFailure) {
+        db.collection("minigames").document("koZnaZna")
+                .collection("items").document(docId)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (snap.exists() && snap.getData() != null) {
+                        onSuccess.onSuccess(snap.getData());
+                    } else {
+                        onFailure.onFailure(new Exception("Ko zna zna podaci nisu pronađeni za ID: " + docId));
                     }
                 })
                 .addOnFailureListener(onFailure);
@@ -308,6 +344,27 @@ public class GameRepository {
         if (opponentRequestListener != null) { opponentRequestListener.remove(); opponentRequestListener = null; }
         if (gameRoomListener    != null) { gameRoomListener.remove();    gameRoomListener    = null; }
         if (roundStateListener  != null) { roundStateListener.remove();  roundStateListener  = null; }
+    }
+
+    public void fetchAssociationQuestion(
+            String questionId,
+            OnSuccessListener<DocumentSnapshot> onSuccess,
+            OnFailureListener onFailure) {
+
+        db.collection("minigames")
+                .document("asocijacije")
+                .collection("items")
+                .document(questionId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists()) {
+                        onFailure.onFailure(
+                                new Exception("Pitanje nije pronađeno: " + questionId));
+                        return;
+                    }
+                    onSuccess.onSuccess(snapshot);
+                })
+                .addOnFailureListener(onFailure);
     }
 
 

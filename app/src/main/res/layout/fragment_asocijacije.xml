@@ -1,145 +1,341 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F7FB">
+    android:background="#F5F5F5">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- ── Header card: status + timer ── -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardHeader"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_margin="16dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="?attr/colorPrimary"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:gravity="center_vertical"
+            android:padding="14dp">
 
             <TextView
-                android:id="@+id/tvAsocStatus"
+                android:id="@+id/tvStatus"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Asocijacije"
-                android:textColor="#172033"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF" />
 
+            <!-- Timer pill -->
             <TextView
-                android:id="@+id/tvAsocTimer"
+                android:id="@+id/tvTimer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
                 android:background="@drawable/bg_timer_pill"
                 android:paddingStart="12dp"
-                android:paddingTop="6dp"
                 android:paddingEnd="12dp"
-                android:paddingBottom="6dp"
-                android:text="120s"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:visibility="invisible" />
+
         </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:id="@+id/tvAsocScore"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="#DBEAFE"
-            android:padding="10dp"
-            android:text="Bodovi: 0"
-            android:textColor="#1E3A8A"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <GridLayout
-            android:id="@+id/gridAsoc"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:columnCount="4"
-            android:layout_marginBottom="14dp" />
+    <!-- ── Scrollable board: 4 kolone ── -->
+    <ScrollView
+        android:id="@+id/scrollBoard"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:clipToPadding="false"
+        android:scrollbars="none"
+        app:layout_constraintTop_toBottomOf="@id/cardHeader"
+        app:layout_constraintBottom_toTopOf="@id/cardGuessButtons"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
-            android:id="@+id/layoutAsocTargets"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ── 4 kolone u redu ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <!-- KOLONA A -->
+                <LinearLayout
+                    android:id="@+id/colLayoutA"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="4dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="3dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="?attr/colorPrimary">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="A"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:textSize="13sp"
+                            android:padding="6dp" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Polja se dodaju programski buildBoard()-om -->
+
+                </LinearLayout>
+
+                <!-- KOLONA B -->
+                <LinearLayout
+                    android:id="@+id/colLayoutB"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="3dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="?attr/colorPrimary">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="B"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:textSize="13sp"
+                            android:padding="6dp" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+                <!-- KOLONA C -->
+                <LinearLayout
+                    android:id="@+id/colLayoutC"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="3dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="?attr/colorPrimary">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="C"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:textSize="13sp"
+                            android:padding="6dp" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+                <!-- KOLONA D -->
+                <LinearLayout
+                    android:id="@+id/colLayoutD"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="4dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="3dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="?attr/colorPrimary">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="D"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:textSize="13sp"
+                            android:padding="6dp" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+            </LinearLayout>
+            <!-- ── Kraj reda sa kolonama ── -->
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ── Guess buttons card: A B C D (pinned iznad finala) ── -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardGuessButtons"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="4dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/white"
+        app:layout_constraintBottom_toTopOf="@id/cardFinalGuess"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginBottom="10dp">
+            android:padding="10dp">
 
+            <!-- Red 1: A + B -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="6dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGuessColA"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Reši A"
+                    android:textSize="13sp"
+                    android:enabled="false"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGuessColB"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Reši B"
+                    android:textSize="13sp"
+                    android:enabled="false"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+            </LinearLayout>
+
+            <!-- Red 2: C + D -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/btnGuessA"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGuessColC"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
-                    android:text="Resenje A" />
+                    android:layout_marginEnd="4dp"
+                    android:text="Reši C"
+                    android:textSize="13sp"
+                    android:enabled="false"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
-                <Button
-                    android:id="@+id/btnGuessB"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGuessColD"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
-                    android:text="Resenje B" />
+                    android:layout_marginStart="4dp"
+                    android:text="Reši D"
+                    android:textSize="13sp"
+                    android:enabled="false"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btnGuessC"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Resenje C" />
-
-                <Button
-                    android:id="@+id/btnGuessD"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="Resenje D" />
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/btnGuessFinal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Konacno resenje" />
         </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilAsocGuess"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+    <!-- ── Final guess button (pinned at bottom) ── -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardFinalGuess"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGuessFinal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Unesi resenje">
+            android:layout_height="52dp"
+            android:text="🏆  Krajnje rešenje"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:enabled="false"
+            app:cornerRadius="16dp" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etAsocGuess"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:imeOptions="actionDone"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-        <Button
-            android:id="@+id/btnSubmitAsocGuess"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="Potvrdi resenje" />
-    </LinearLayout>
-</ScrollView>
+    <!-- ── Waiting overlay ── -->
+    <TextView
+        android:id="@+id/tvWaiting"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:text="Čekaj na protivnika..."
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#64748B"
+        android:background="#CCF5F5F5"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/cardHeader"
+        app:layout_constraintBottom_toTopOf="@id/cardGuessButtons"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

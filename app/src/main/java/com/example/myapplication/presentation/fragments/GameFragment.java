@@ -24,8 +24,8 @@ public class GameFragment extends Fragment {
     static {
         MINIGAME_REGISTRY.put("skocko", SkockoFragment.class);
         MINIGAME_REGISTRY.put("korakPoKorak", KorakFragment.class);
-        MINIGAME_REGISTRY.put("mojbroj", MojBrojFragment.class);
-        MINIGAME_REGISTRY.put("quiz", QuizFragment.class);
+        MINIGAME_REGISTRY.put("mojBroj", MojBrojFragment.class);
+        MINIGAME_REGISTRY.put("koZnaZna", QuizFragment.class);
         MINIGAME_REGISTRY.put("spojnice", SpojniceFragment.class);
         MINIGAME_REGISTRY.put("asocijacije", AsocijacijeFragment.class);
     }
@@ -68,7 +68,6 @@ public class GameFragment extends Fragment {
         vm.gameRoom.observe(getViewLifecycleOwner(), room -> {
             if (room == null) return;
 
-
             if ("FINISHED".equals(room.getGameState())) {
                 if (!navigatedToResults) {
                     navigatedToResults = true;
@@ -79,17 +78,11 @@ public class GameFragment extends Fragment {
 
             String phase = room.getRoundPhase();
             if ("MINIGAME_DONE".equals(phase)) {
-                roundsPlayed++;
-                int requiredRounds = ("skocko".equals(currentMinigameType)
-                        || "korakPoKorak".equals(currentMinigameType)
-                        || "mojbroj".equals(currentMinigameType)) ? 1 : ROUNDS_PER_GAME;
-                if (roundsPlayed >= requiredRounds) { // <--- CHANGED HERE
-                    roundsPlayed = 0;
-                    currentMinigameType = null;
-                    scheduleAdvance();
-                } else {
-                    scheduleNextRound();
-                }
+                roundsPlayed = 0; // Resetuj brojač za sledeću igru
+                currentMinigameType = null;
+
+                // Samo scheduleAdvance, bez provere rundi
+                scheduleAdvance();
             } else {
                 layoutGame.setVisibility(View.VISIBLE);
 

@@ -1,6 +1,7 @@
 package com.example.myapplication.data.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,16 +43,15 @@ public class GameRoom {
     private boolean quizP2Correct;
     private boolean quizCorrectClaimed;
 
-    private int spojniceRoundIndex;
-    private List<String> spojniceSolvedLeft = new ArrayList<>();
-    private List<String> spojniceAttemptedLeft = new ArrayList<>();
+    private Map<String, String> spojniceMatches = new HashMap<>();
 
     private int asocRoundIndex;
-    private List<Integer> asocOpenedCells = new ArrayList<>();
-    private List<String> asocSolvedColumns = new ArrayList<>();
+    private List<String> asocOpenedCells = new ArrayList<>();
+    private List<Integer> asocSolvedColumns = new ArrayList<>();
     private String asocTurnPlayer;
     private boolean asocFinalSolved;
     private long asocRoundStartedAt;
+    private String asocQuestionId;
 
     public GameRoom() {}
 
@@ -146,10 +146,10 @@ public class GameRoom {
     public long getQuizQuestionStartedAt() { return quizQuestionStartedAt; }
     public void setQuizQuestionStartedAt(long quizQuestionStartedAt) { this.quizQuestionStartedAt = quizQuestionStartedAt; }
 
-    public Boolean getQuizP1Answered() { return quizP1Answered; }
+    public Boolean isQuizP1Answered() { return quizP1Answered; }
     public void setQuizP1Answered(boolean quizP1Answered) { this.quizP1Answered = quizP1Answered; }
 
-    public Boolean getQuizP2Answered() { return quizP2Answered; }
+    public Boolean isQuizP2Answered() { return quizP2Answered; }
     public void setQuizP2Answered(boolean quizP2Answered) { this.quizP2Answered = quizP2Answered; }
 
     public Boolean getQuizP1Correct() { return quizP1Correct; }
@@ -161,24 +161,24 @@ public class GameRoom {
     public Boolean getQuizCorrectClaimed() { return quizCorrectClaimed; }
     public void setQuizCorrectClaimed(boolean quizCorrectClaimed) { this.quizCorrectClaimed = quizCorrectClaimed; }
 
-    public int getSpojniceRoundIndex() { return spojniceRoundIndex; }
-    public void setSpojniceRoundIndex(int spojniceRoundIndex) { this.spojniceRoundIndex = spojniceRoundIndex; }
+    public Map<String, String> getSpojniceMatches() {
+        return spojniceMatches;
+    }
 
-    public List<String> getSpojniceSolvedLeft() { return spojniceSolvedLeft; }
-    public void setSpojniceSolvedLeft(List<String> spojniceSolvedLeft) { this.spojniceSolvedLeft = spojniceSolvedLeft; }
-
-    public List<String> getSpojniceAttemptedLeft() { return spojniceAttemptedLeft; }
-    public void setSpojniceAttemptedLeft(List<String> spojniceAttemptedLeft) { this.spojniceAttemptedLeft = spojniceAttemptedLeft; }
-
+    public void setSpojniceMatches(Map<String, String> spojniceMatches) {
+        this.spojniceMatches = spojniceMatches;
+    }
     public int getAsocRoundIndex() { return asocRoundIndex; }
     public void setAsocRoundIndex(int asocRoundIndex) { this.asocRoundIndex = asocRoundIndex; }
 
-    public List<Integer> getAsocOpenedCells() { return asocOpenedCells; }
-    public void setAsocOpenedCells(List<Integer> asocOpenedCells) { this.asocOpenedCells = asocOpenedCells; }
+    public List<String> getAsocOpenedCells() { return asocOpenedCells; }
+    public void setAsocOpenedCells(List<String> asocOpenedCells) { this.asocOpenedCells = asocOpenedCells; }
 
-    public List<String> getAsocSolvedColumns() { return asocSolvedColumns; }
-    public void setAsocSolvedColumns(List<String> asocSolvedColumns) { this.asocSolvedColumns = asocSolvedColumns; }
+    public List<Integer> getAsocSolvedColumns() { return asocSolvedColumns; }
+    public void setAsocSolvedColumns(List<Integer> asocSolvedColumns) { this.asocSolvedColumns = asocSolvedColumns; }
 
+    public String getAsocQuestionId() { return asocQuestionId; }
+    public void setAsocQuestionId(String v) { asocQuestionId = v; }
     public String getAsocTurnPlayer() { return asocTurnPlayer; }
     public void setAsocTurnPlayer(String asocTurnPlayer) { this.asocTurnPlayer = asocTurnPlayer; }
 

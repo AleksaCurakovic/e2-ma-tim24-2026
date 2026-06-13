@@ -3,10 +3,13 @@ package com.example.myapplication.service;
 import com.example.myapplication.data.repository.GameRepository;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GameService {
 
@@ -168,8 +171,17 @@ public class GameService {
         updates.put("roundPhase", p1IsRoundOwner ? "P2_TURN" : "MINIGAME_DONE");
         return updates;
     }
+    public void fetchKoZnaZnaData(String docId,
+                              com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
+                              com.google.android.gms.tasks.OnFailureListener onFailure) {
+        repository.fetchKoZnaZnaData(docId, onSuccess, onFailure);
+    }
 
-
+    public void fetchSpojniceData(String docId,
+                                  com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
+                                  com.google.android.gms.tasks.OnFailureListener onFailure) {
+        repository.fetchSpojniceData(docId, onSuccess, onFailure);
+    }
     public void fetchKorakSolution(String docId, String playerPrefix,
                                    OnSuccessListener<Map<String, Object>> onSuccess,
                                    OnFailureListener onFailure) {
@@ -225,5 +237,58 @@ public class GameService {
         List<String> feedback = new ArrayList<>();
         for (String r : result) feedback.add(r);
         return feedback;
+    }
+
+    public void fetchAssociationQuestion(
+            String questionId,
+            OnSuccessListener<DocumentSnapshot> onSuccess,
+            OnFailureListener onFailure) {
+        repository.fetchAssociationQuestion(questionId, onSuccess, onFailure);
+    }
+
+    public Map<String, Object> scoreAsocRound(
+            boolean isPlayerOne,
+            int currentP1Score,
+            int currentP2Score,
+            Set<String> openedCells,   // localOpenedCells iz fragmenta
+            Set<Integer> solvedCols,   // localSolvedColumns iz fragmenta
+            String nextPhase           // "P2_TURN" ili "MINIGAME_DONE"
+    ) {
+        int untouched = 0;
+        int colSum    = 0;
+        for (int col = 0; col < 4; col++) {
+            int opened = countCol(col, openedCells);
+            if (opened == 0 && !solvedCols.contains(col)) {
+                untouched++;
+            } else {
+                colSum += 2 + (4 - opened);
+            }
+        }
+        int score = 7 + 6 * untouched + colSum;
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("asocFinalSolved",   true);
+        updates.put("asocOpenedCells",   new ArrayList<>());   // reset za P2 rundu
+        updates.put("asocSolvedColumns", new ArrayList<>());
+        updates.put("asocTurnPlayer",    "");
+        updates.put("roundPhase",        nextPhase);
+
+        if (isPlayerOne) {
+            updates.put("playerOneRoundScore", score);
+            updates.put("playerOneScore",      currentP1Score + score);
+        } else {
+            updates.put("playerTwoRoundScore", score);
+            updates.put("playerTwoScore",      currentP2Score + score);
+        }
+        return updates;
+    }
+
+    private int countCol(int col, Set<String> openedCells) {
+        int n = 0;
+        for (String k : openedCells) {
+            String[] p = k.split("_");
+            if (p.length == 2 && Integer.parseInt(p[0]) == col) n++;
+        }
+        return n;
     }
 }

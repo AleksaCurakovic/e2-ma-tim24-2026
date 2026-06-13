@@ -8,10 +8,13 @@ import androidx.lifecycle.ViewModel;
 import com.example.myapplication.data.model.GameRoom;
 import com.example.myapplication.data.repository.GameRepository;
 import com.example.myapplication.service.GameService;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GameViewModel extends ViewModel {
 
@@ -131,6 +134,17 @@ public class GameViewModel extends ViewModel {
         advancePhase(gameId, updates);
     }
 
+    public void fetchSpojniceData(String docId,
+                                  com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
+                                  com.google.android.gms.tasks.OnFailureListener onFailure) {
+        gameService.fetchSpojniceData(docId, onSuccess, onFailure);
+    }
+
+    public void fetchKoznaZnaData(String docId,
+                              com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
+                              com.google.android.gms.tasks.OnFailureListener onFailure) {
+        gameService.fetchKoZnaZnaData(docId, onSuccess, onFailure);
+    }
     public void fetchKorakSolution(String docId, String playerPrefix,
                                    com.google.android.gms.tasks.OnSuccessListener<Map<String, Object>> onSuccess,
                                    com.google.android.gms.tasks.OnFailureListener onFailure) {
@@ -139,6 +153,39 @@ public class GameViewModel extends ViewModel {
 
     public int computeStarsDelta(int myScore, boolean iWon) {
         return gameService.computeStarsDelta(myScore, iWon);
+    }
+
+
+    public void fetchAssociationQuestion(
+            String questionId,
+            OnSuccessListener<DocumentSnapshot> onSuccess,
+            OnFailureListener onFailure) {
+        gameService.fetchAssociationQuestion(questionId, onSuccess, onFailure);
+    }
+
+
+    public void submitAsocScore(
+            String gameId,
+            boolean isPlayerOne,
+            Set<String> openedCells,
+            Set<Integer> solvedCols,
+            String nextPhase
+    ) {
+        GameRoom room = gameRoom.getValue();
+        if (room == null) return;
+        Map<String, Object> updates = gameService.scoreAsocRound(
+                isPlayerOne,
+                room.getPlayerOneScore(),
+                room.getPlayerTwoScore(),
+                openedCells,
+                solvedCols,
+                nextPhase
+        );
+        updates.put("asocTurnPlayer", "");
+        updates.put("asocOpenedCells", new java.util.ArrayList<>());
+        updates.put("asocSolvedColumns", new java.util.ArrayList<>());
+        updates.put("asocFinalSolved", false);
+        advancePhase(gameId, updates);
     }
 
     @Override
