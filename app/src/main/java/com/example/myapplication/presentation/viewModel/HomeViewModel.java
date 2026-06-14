@@ -64,4 +64,9 @@ public class HomeViewModel extends ViewModel {
     public void logout() {
         authService.logout();
     }
+
+    /** Postavlja status da li korisnik trenutno učestvuje u partiji. */
+    public void setInGame(boolean inGame) {
+        authService.setInGame(inGame, unused -> {}, e -> {});
+    }
 }

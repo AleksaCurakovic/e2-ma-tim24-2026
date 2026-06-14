@@ -9,6 +9,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.Source;
 
 import java.util.ArrayList;
@@ -23,12 +24,14 @@ public class GameRepository {
 
     private static final String COL_REQUESTS = "gameRequests";
     private static final String COL_ROOMS    = "gameRooms";
+    private static final String COL_PRESENCE = "gamePresence";
     private static final long REQUEST_TTL_MS = 2 * 60 * 1000L;
     private final FirebaseFirestore db;
 
     private ListenerRegistration gameRequestListener;
     private ListenerRegistration opponentRequestListener;
     private ListenerRegistration gameRoomListener;
+    private ListenerRegistration presenceListener;
 
     private ListenerRegistration roundStateListener;
 
@@ -220,7 +223,15 @@ public class GameRepository {
                                List<String> playlist,
                                OnSuccessListener<Void> onSuccess,
                                OnFailureListener onFailure) {
+        createGameRoom(gameId, playerOne, playerTwo, playlist, false, onSuccess, onFailure);
+    }
+
+    public void createGameRoom(String gameId, String playerOne, String playerTwo,
+                               List<String> playlist, boolean friendly,
+                               OnSuccessListener<Void> onSuccess,
+                               OnFailureListener onFailure) {
         GameRoom room = new GameRoom(gameId, playerOne, playerTwo, playlist);
+        room.setFriendly(friendly);
 
         if (playlist != null && !playlist.isEmpty()) {
             String first = playlist.get(0);
@@ -329,6 +340,45 @@ public class GameRepository {
                 .addOnFailureListener(onFailure);
     }
 
+    // =========================================================================
+    // PRISUSTVO (heartbeat) — radi detekcije igrača koji je napustio partiju
+    // =========================================================================
+
+    /** Upisuje "poslednji put viđen" za lokalnog igrača u zaseban presence dokument. */
+    public void sendHeartbeat(String gameId, boolean isPlayerOne) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(isPlayerOne ? "p1LastSeen" : "p2LastSeen", System.currentTimeMillis());
+        db.collection(COL_PRESENCE).document(gameId).set(updates, SetOptions.merge());
+    }
+
+    public void listenPresence(String gameId,
+                               OnSuccessListener<Map<String, Object>> onUpdate,
+                               OnFailureListener onFailure) {
+        if (presenceListener != null) presenceListener.remove();
+        presenceListener = db.collection(COL_PRESENCE).document(gameId)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) { if (onFailure != null) onFailure.onFailure(error); return; }
+                    if (snapshot != null && snapshot.exists() && snapshot.getData() != null) {
+                        onUpdate.onSuccess(snapshot.getData());
+                    }
+                });
+    }
+
+    /** Označava lokalnog igrača kao odsutnog (stari timestamp) bez brisanja dokumenta. */
+    public void markAbsent(String gameId, boolean isPlayerOne) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(isPlayerOne ? "p1LastSeen" : "p2LastSeen", 1L);
+        db.collection(COL_PRESENCE).document(gameId).set(updates, SetOptions.merge());
+    }
+
+    public void detachPresence() {
+        if (presenceListener != null) { presenceListener.remove(); presenceListener = null; }
+    }
+
+    public void deletePresence(String gameId) {
+        if (gameId != null) db.collection(COL_PRESENCE).document(gameId).delete();
+    }
+
     public void detachMatchmakingListeners() {
         if (gameRequestListener != null) {
             gameRequestListener.remove();
@@ -344,6 +394,7 @@ public class GameRepository {
         if (opponentRequestListener != null) { opponentRequestListener.remove(); opponentRequestListener = null; }
         if (gameRoomListener    != null) { gameRoomListener.remove();    gameRoomListener    = null; }
         if (roundStateListener  != null) { roundStateListener.remove();  roundStateListener  = null; }
+        if (presenceListener    != null) { presenceListener.remove();    presenceListener    = null; }
     }
 
     public void fetchAssociationQuestion(

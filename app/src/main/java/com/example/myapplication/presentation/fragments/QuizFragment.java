@@ -127,7 +127,7 @@ public class QuizFragment extends Fragment {
                     showCorrectAnswer();
                 }
                 handler.postDelayed(() -> {
-                    if (isPlayerOne(vm.gameRoom.getValue())) advanceToNextQuestion();
+                    if (shouldIDriveQuiz(vm.gameRoom.getValue())) advanceToNextQuestion();
                 }, FEEDBACK_DISPLAY_MS);
             }
         }.start();
@@ -195,5 +195,16 @@ public class QuizFragment extends Fragment {
         layoutAnswers = view.findViewById(R.id.layoutAnswers);
     }
     private boolean isPlayerOne(GameRoom room) { return myUsername != null && myUsername.equals(room.getPlayerOne()); }
+
+    /**
+     * Napredovanje pitanja inače vodi playerOne. Ako je playerOne napustio partiju
+     * (nije prisutan), vođenje preuzima playerTwo da kviz ne bi stao.
+     */
+    private boolean shouldIDriveQuiz(GameRoom room) {
+        if (room == null) return false;
+        boolean p1Present = vm.isPlayerPresent(true);
+        String driver = p1Present ? room.getPlayerOne() : room.getPlayerTwo();
+        return myUsername != null && myUsername.equals(driver);
+    }
     @Override public void onDestroyView() { super.onDestroyView(); cancelTimer(); handler.removeCallbacksAndMessages(null); }
 }

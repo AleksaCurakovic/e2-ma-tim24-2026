@@ -80,6 +80,7 @@ public class HomeFragment extends Fragment {
 
         gameViewModel.navigateToGame.observe(getViewLifecycleOwner(), gameId -> {
             if (gameId != null) {
+                homeViewModel.setInGame(true);
                 Bundle b = new Bundle();
                 b.putString("gameId", gameId);
                 String username = gameViewModel.myUsername.getValue();

@@ -142,13 +142,14 @@ public class AuthRepository {
                         db.collection("users").document(uid)
                                 .update(
                                         "tokens", newTokens,
-                                        "lastLoginTime", now
+                                        "lastLoginTime", now,
+                                        "loggedIn", true
                                 )
                                 .addOnSuccessListener(onSuccess)
                                 .addOnFailureListener(onFailure);
                     } else {
                         db.collection("users").document(uid)
-                                .update("lastLoginTime", now)
+                                .update("lastLoginTime", now, "loggedIn", true)
                                 .addOnSuccessListener(onSuccess)
                                 .addOnFailureListener(onFailure);
                     }
@@ -176,7 +177,40 @@ public class AuthRepository {
     }
 
     public void logout() {
-        auth.signOut();
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser != null && !firebaseUser.isAnonymous()) {
+            // Obeleži da korisnik više nije ulogovan (prijatelji ga vide kao offline).
+            db.collection("users").document(firebaseUser.getUid())
+                    .update("loggedIn", false, "inGame", false)
+                    .addOnCompleteListener(t -> auth.signOut());
+        } else {
+            auth.signOut();
+        }
+    }
+
+    /** Postavlja status prisutnosti (ulogovan) za tekućeg registrovanog korisnika. */
+    public void setLoggedIn(boolean loggedIn,
+                            OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        updateOwnField("loggedIn", loggedIn, onSuccess, onFailure);
+    }
+
+    /** Postavlja status da li korisnik trenutno učestvuje u partiji. */
+    public void setInGame(boolean inGame,
+                          OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        updateOwnField("inGame", inGame, onSuccess, onFailure);
+    }
+
+    private void updateOwnField(String field, Object value,
+                                OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null || firebaseUser.isAnonymous()) {
+            onSuccess.onSuccess(null);
+            return;
+        }
+        db.collection("users").document(firebaseUser.getUid())
+                .update(field, value)
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
     }
 
     public void updateAvatar(int avatarId, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {

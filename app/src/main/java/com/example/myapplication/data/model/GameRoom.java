@@ -12,6 +12,10 @@ public class GameRoom {
     private String playerTwo;
     private String gameState;
     private long createdAt;
+    // Prijateljska partija: ne dodeljuje zvezde/statistiku/rang i ne troši tokene.
+    private boolean friendly;
+    // Korisničko ime igrača koji je napustio partiju (null ako niko nije napustio).
+    private String leftPlayer;
     private List<String> minigamePlaylist;
     private int currentMinigameIndex;
     private int playerOneScore;
@@ -85,6 +89,12 @@ public class GameRoom {
 
     public String getGameState() { return gameState; }
     public void setGameState(String gameState) { this.gameState = gameState; }
+
+    public boolean isFriendly() { return friendly; }
+    public void setFriendly(boolean friendly) { this.friendly = friendly; }
+
+    public String getLeftPlayer() { return leftPlayer; }
+    public void setLeftPlayer(String leftPlayer) { this.leftPlayer = leftPlayer; }
 
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }

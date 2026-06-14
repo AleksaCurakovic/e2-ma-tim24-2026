@@ -1,6 +1,8 @@
 package com.example.myapplication.presentation.viewModel;
 
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -37,6 +39,14 @@ public class GameViewModel extends ViewModel {
     public final MutableLiveData<List<String>> playlist  = new MutableLiveData<>();
     public final MutableLiveData<String>       currentPhase = new MutableLiveData<>();
 
+    // --- Presence (heartbeat) ---
+    // [p1LastSeen, p2LastSeen] u milisekundama; 0 = još neviđen.
+    public final MutableLiveData<long[]> presence = new MutableLiveData<>(new long[]{0, 0});
+    private static final long ABSENT_THRESHOLD_MS = 5_000L;
+    private static final long HEARTBEAT_MS = 2_000L;
+    private Handler heartbeatHandler;
+    private boolean presenceStarted = false;
+
     // =========================================================================
     // MATCHMAKING
     // =========================================================================
@@ -56,11 +66,18 @@ public class GameViewModel extends ViewModel {
                 });
     }
 
-    private boolean listening = false;
+    private String listenedGameId;
 
     public void listen(String gameId) {
-        if (listening) return;
-        listening = true;
+        if (gameId == null) return;
+        if (gameId.equals(listenedGameId)) return; // već slušamo ovu partiju
+        listenedGameId = gameId;
+
+        // Očisti stanje prethodne (završene) partije da nova krene čisto i da
+        // GameFragment ne reaguje na zaostalu FINISHED sobu.
+        gameRoom.setValue(null);
+        currentPhase.setValue(null);
+
         repository.listenToGameRoom(gameId,
                 room -> {
                     gameRoom.postValue(room);
@@ -71,6 +88,67 @@ public class GameViewModel extends ViewModel {
                 },
                 e -> errorMessage.postValue("Sync error: " + e.getMessage())
         );
+    }
+
+    /** Pokreće periodični heartbeat lokalnog igrača i slušanje prisustva oba igrača. */
+    public void startPresence(String gameId, boolean amIPlayerOne) {
+        if (presenceStarted || gameId == null) return;
+        presenceStarted = true;
+
+        repository.listenPresence(gameId, data -> {
+            long p1 = toLong(data.get("p1LastSeen"));
+            long p2 = toLong(data.get("p2LastSeen"));
+            presence.postValue(new long[]{p1, p2});
+        }, e -> { /* tiho */ });
+
+        heartbeatHandler = new Handler(Looper.getMainLooper());
+        Runnable beat = new Runnable() {
+            @Override public void run() {
+                repository.sendHeartbeat(gameId, amIPlayerOne);
+                heartbeatHandler.postDelayed(this, HEARTBEAT_MS);
+            }
+        };
+        heartbeatHandler.post(beat);
+    }
+
+    public void stopPresence(String gameId) {
+        if (heartbeatHandler != null) {
+            heartbeatHandler.removeCallbacksAndMessages(null);
+            heartbeatHandler = null;
+        }
+        repository.detachPresence();
+        repository.deletePresence(gameId);
+        presenceStarted = false;
+    }
+
+    /**
+     * Pri napuštanju partije: prekida slanje heartbeat-a i odmah označava sebe odsutnim
+     * (bez brisanja presence dokumenta, da protivnik može da detektuje odsustvo).
+     */
+    public void markSelfAbsent(String gameId, boolean amIPlayerOne) {
+        if (heartbeatHandler != null) {
+            heartbeatHandler.removeCallbacksAndMessages(null);
+            heartbeatHandler = null;
+        }
+        repository.markAbsent(gameId, amIPlayerOne);
+        repository.detachPresence();
+        presenceStarted = false;
+    }
+
+    /**
+     * Da li je igrač trenutno prisutan. Dok ga nismo ni videli (lastSeen==0) tretiramo
+     * ga kao prisutnog (igra tek počinje); odsutan je tek kad mu heartbeat zastari.
+     */
+    public boolean isPlayerPresent(boolean isPlayerOne) {
+        long[] p = presence.getValue();
+        if (p == null) return true;
+        long seen = isPlayerOne ? p[0] : p[1];
+        if (seen == 0) return true;
+        return System.currentTimeMillis() - seen < ABSENT_THRESHOLD_MS;
+    }
+
+    private static long toLong(Object o) {
+        return o instanceof Number ? ((Number) o).longValue() : 0L;
     }
 
     public void advancePhase(String gameId, Map<String, Object> updates) {

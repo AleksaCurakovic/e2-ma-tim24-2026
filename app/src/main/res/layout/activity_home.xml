@@ -152,6 +152,15 @@
             android:gravity="center_vertical"
             android:background="?attr/selectableItemBackground"/>
 
+        <TextView
+            android:id="@+id/menuRankList"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="  📊  Rank List"
+            android:textSize="15sp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground"/>
+
 
     </LinearLayout>
 

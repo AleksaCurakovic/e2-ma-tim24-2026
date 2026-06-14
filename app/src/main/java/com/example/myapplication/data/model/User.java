@@ -1,6 +1,8 @@
 package com.example.myapplication.data.model;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class User {
     private String uid;
@@ -16,6 +18,18 @@ public class User {
     private int totalGames;
     private int wonGames;
     private int lostGames;
+
+    // Lista prijatelja (uid-evi) — veza je obostrana.
+    private List<String> friends = new ArrayList<>();
+    // Da li je korisnik trenutno ulogovan (ne mora biti u prvom planu aplikacije).
+    private boolean loggedIn;
+    // Da li trenutno učestvuje u nekoj partiji.
+    private boolean inGame;
+
+    // Poslednji ciklus za koji je korisniku već dodeljena nagrada sa rang liste.
+    // Sprečava ponovno dodeljivanje pri svakom otvaranju aplikacije.
+    private String lastClaimedWeeklyCycle;
+    private String lastClaimedMonthlyCycle;
 
     private long lastLoginTime;
 
@@ -141,4 +155,30 @@ public class User {
     public void setLostGames(int lostGames) {
         this.lostGames = lostGames;
     }
+
+    public String getLastClaimedWeeklyCycle() { return lastClaimedWeeklyCycle; }
+
+    public void setLastClaimedWeeklyCycle(String lastClaimedWeeklyCycle) {
+        this.lastClaimedWeeklyCycle = lastClaimedWeeklyCycle;
+    }
+
+    public String getLastClaimedMonthlyCycle() { return lastClaimedMonthlyCycle; }
+
+    public void setLastClaimedMonthlyCycle(String lastClaimedMonthlyCycle) {
+        this.lastClaimedMonthlyCycle = lastClaimedMonthlyCycle;
+    }
+
+    public List<String> getFriends() {
+        return friends != null ? friends : new ArrayList<>();
+    }
+
+    public void setFriends(List<String> friends) { this.friends = friends; }
+
+    public boolean isLoggedIn() { return loggedIn; }
+
+    public void setLoggedIn(boolean loggedIn) { this.loggedIn = loggedIn; }
+
+    public boolean isInGame() { return inGame; }
+
+    public void setInGame(boolean inGame) { this.inGame = inGame; }
 }

@@ -69,6 +69,8 @@ public class ProfileFragment extends Fragment {
 
         Button btnLogout = view.findViewById(R.id.btnLogout);
         btnLogout.setOnClickListener(v -> {
+            // Zaustavi foreground servis za pozivnice pre odjave.
+            com.example.myapplication.service.InviteForegroundService.stop(requireContext());
             viewModel.logout();
             Intent intent = new Intent(requireActivity(), AuthActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);

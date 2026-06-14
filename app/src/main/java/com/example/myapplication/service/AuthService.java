@@ -35,6 +35,10 @@ public class AuthService {
         repository.logout();
     }
 
+    public void setInGame(boolean inGame, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        repository.setInGame(inGame, onSuccess, onFailure);
+    }
+
     public void updateAvatar(int avatarId, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
         repository.updateAvatar(avatarId, onSuccess, onFailure);
     }
