@@ -100,6 +100,7 @@ public class ResultsFragment extends Fragment {
 
         homeVm.applyGameRewards(delta,
                 unused -> {
+                    homeVm.loadUser();
                     String msg = iWon
                             ? "Pobedio si! +" + delta + " zvezdi"
                             : (delta >= 0

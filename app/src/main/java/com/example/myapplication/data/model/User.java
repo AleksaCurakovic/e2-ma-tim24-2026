@@ -11,9 +11,11 @@ public class User {
     private String region;
     private int tokens;
     private int stars;
+    private int leagueLevel;
     private String leagueName;
     private String leagueIcon;
     private int avatarId;
+    private String avatarFrameColor;
     private String qrCode;
     private int totalGames;
     private int wonGames;
@@ -30,6 +32,7 @@ public class User {
     // Sprečava ponovno dodeljivanje pri svakom otvaranju aplikacije.
     private String lastClaimedWeeklyCycle;
     private String lastClaimedMonthlyCycle;
+    private String pendingLeagueChange;
 
     private long lastLoginTime;
 
@@ -47,9 +50,13 @@ public class User {
         this.region = region;
         this.tokens = 5;
         this.lastLoginTime = 0;
-        this.leagueName = "Commoner";
+        this.stars = 0;
+        this.leagueLevel = 0;
+        this.leagueName = "Pocetnik";
         this.leagueIcon = "league0";
         this.avatarId = 0;
+        this.avatarFrameColor = "";
+        this.qrCode = "FRIEND:" + uid;
         this.totalGames = 0;
         this.wonGames = 0;
         this.lostGames = 0;
@@ -103,6 +110,14 @@ public class User {
         this.stars = stars;
     }
 
+    public int getLeagueLevel() {
+        return leagueLevel;
+    }
+
+    public void setLeagueLevel(int leagueLevel) {
+        this.leagueLevel = leagueLevel;
+    }
+
     public String getLeagueName() {
         return leagueName;
     }
@@ -131,6 +146,14 @@ public class User {
 
     public void setAvatarId(int avatarId) {
         this.avatarId = avatarId;
+    }
+
+    public String getAvatarFrameColor() {
+        return avatarFrameColor;
+    }
+
+    public void setAvatarFrameColor(String avatarFrameColor) {
+        this.avatarFrameColor = avatarFrameColor;
     }
 
     public String getQrCode() {
@@ -175,6 +198,12 @@ public class User {
 
     public void setLastClaimedMonthlyCycle(String lastClaimedMonthlyCycle) {
         this.lastClaimedMonthlyCycle = lastClaimedMonthlyCycle;
+    }
+
+    public String getPendingLeagueChange() { return pendingLeagueChange; }
+
+    public void setPendingLeagueChange(String pendingLeagueChange) {
+        this.pendingLeagueChange = pendingLeagueChange;
     }
 
     public List<String> getFriends() {

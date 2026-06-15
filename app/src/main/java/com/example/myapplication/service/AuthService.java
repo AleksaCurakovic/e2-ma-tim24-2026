@@ -56,9 +56,14 @@ public class AuthService {
     }
 
     public void applyGameRewards(int starsDelta,
-                                  OnSuccessListener<Void> onSuccess,
-                                  OnFailureListener onFailure) {
+                                 OnSuccessListener<Void> onSuccess,
+                                 OnFailureListener onFailure) {
         repository.applyGameRewards(starsDelta, onSuccess, onFailure);
+    }
+
+    public void clearPendingLeagueChange(OnSuccessListener<Void> onSuccess,
+                                         OnFailureListener onFailure) {
+        repository.clearPendingLeagueChange(onSuccess, onFailure);
     }
 
     public void changePassword(String oldPassword, String newPassword,

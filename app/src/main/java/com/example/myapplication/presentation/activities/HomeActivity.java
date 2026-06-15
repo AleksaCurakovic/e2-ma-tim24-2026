@@ -17,6 +17,7 @@ import android.widget.TextView;
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -67,6 +68,7 @@ public class HomeActivity extends AppCompatActivity {
     private boolean inviteDialogShowing = false;
     private boolean inviteServiceStarted = false;
     private String myUid;
+    private String lastLeagueChangeMessage;
 
     // Heartbeat prisustva: dok je app u prvom planu osvežavamo lastSeen, da bi prijatelji
     // videli korisnika offline i kad je app naglo ugašena (heartbeat stane → status zastari).
@@ -279,11 +281,14 @@ public class HomeActivity extends AppCompatActivity {
                         .setPopUpTo(R.id.homeFragment, false)
                         .setLaunchSingleTop(true)
                         .build();
-                navController.navigate(R.id.chatFragment, null, navOptions);
+                navController.navigate(R.id.regionFragment, null, navOptions);
             }
         });
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> d026c18b7da3ca82fb5670043f94c763166d16a3
         findViewById(R.id.menuRankList).setOnClickListener(v -> {
             closeDropdown();
 
@@ -332,6 +337,17 @@ public class HomeActivity extends AppCompatActivity {
                 myUid = user.getUid();
                 // Foreground servis prima pozivnice i kad je aplikacija u pozadini.
                 InviteForegroundService.start(this, myUid);
+            }
+            if (user != null && user.getPendingLeagueChange() != null
+                    && !user.getPendingLeagueChange().isEmpty()
+                    && !user.getPendingLeagueChange().equals(lastLeagueChangeMessage)) {
+                lastLeagueChangeMessage = user.getPendingLeagueChange();
+                new AlertDialog.Builder(this)
+                        .setTitle("Promena lige")
+                        .setMessage(user.getPendingLeagueChange())
+                        .setPositiveButton("U redu", (dialog, which) ->
+                                homeViewModel.clearPendingLeagueChange())
+                        .show();
             }
         });
 

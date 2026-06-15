@@ -29,10 +29,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Regionalni čet u realnom vremenu. Igrači istog regiona razmenjuju poruke;
- * tuđe poruke su levo, moje desno. Svaka poruka ima ime pošiljaoca, datum i vreme.
- */
 public class ChatFragment extends Fragment {
 
     private ChatViewModel vm;
@@ -51,11 +47,11 @@ public class ChatFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        vm     = new ViewModelProvider(requireActivity()).get(ChatViewModel.class);
+        vm = new ViewModelProvider(requireActivity()).get(ChatViewModel.class);
         homeVm = new ViewModelProvider(requireActivity()).get(HomeViewModel.class);
 
         container = view.findViewById(R.id.chatContainer);
-        scroll    = view.findViewById(R.id.chatScroll);
+        scroll = view.findViewById(R.id.chatScroll);
         TextView title = view.findViewById(R.id.tvChatTitle);
         EditText etMessage = view.findViewById(R.id.etMessage);
         MaterialButton btnSend = view.findViewById(R.id.btnSend);
@@ -65,7 +61,7 @@ public class ChatFragment extends Fragment {
             if (text.isEmpty()) return;
             User me = homeVm.currentUser.getValue();
             if (me == null || region == null) {
-                Toast.makeText(requireContext(), "Učitavanje korisnika...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Ucitavanje korisnika...", Toast.LENGTH_SHORT).show();
                 return;
             }
             vm.send(me.getUid(), me.getUsername(), text);
@@ -88,11 +84,11 @@ public class ChatFragment extends Fragment {
         myUid = user.getUid();
         region = user.getRegion();
         if (region == null || region.isEmpty()) {
-            title.setText("Regionalni čet");
-            Toast.makeText(requireContext(), "Nemaš dodeljen region.", Toast.LENGTH_SHORT).show();
+            title.setText("Regionalni cet");
+            Toast.makeText(requireContext(), "Nemas dodeljen region.", Toast.LENGTH_SHORT).show();
             return;
         }
-        title.setText("Regionalni čet • " + region);
+        title.setText("Regionalni cet - " + region);
         vm.start(region);
     }
 
@@ -112,13 +108,12 @@ public class ChatFragment extends Fragment {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         wlp.bottomMargin = dp(8);
         wrapper.setLayoutParams(wlp);
-        // Tuđe poruke levo, moje desno (tačka d).
         wrapper.setGravity(mine ? Gravity.END : Gravity.START);
 
         LinearLayout bubble = new LinearLayout(requireContext());
         bubble.setOrientation(LinearLayout.VERTICAL);
         bubble.setPadding(dp(12), dp(8), dp(12), dp(8));
-        bubble.setBackgroundColor(mine ? Color.parseColor("#BBDEFB") : Color.WHITE);
+        bubble.setBackgroundColor(mine ? Color.parseColor("#DBEAFE") : Color.WHITE);
         bubble.setElevation(dp(1));
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -126,26 +121,23 @@ public class ChatFragment extends Fragment {
         blp.rightMargin = mine ? 0 : dp(48);
         bubble.setLayoutParams(blp);
 
-        // Ime pošiljaoca (tačka c)
         TextView sender = new TextView(requireContext());
-        sender.setText(mine ? "Ti" : (m.getSenderUsername() != null ? m.getSenderUsername() : "—"));
+        sender.setText(mine ? "Ti" : (m.getSenderUsername() != null ? m.getSenderUsername() : "-"));
         sender.setTextSize(12);
         sender.setTypeface(null, Typeface.BOLD);
-        sender.setTextColor(mine ? Color.parseColor("#1565C0") : Color.parseColor("#455A64"));
+        sender.setTextColor(mine ? Color.parseColor("#1D4ED8") : Color.parseColor("#475569"));
         bubble.addView(sender);
 
-        // Tekst poruke
         TextView text = new TextView(requireContext());
         text.setText(m.getText());
         text.setTextSize(15);
-        text.setTextColor(Color.parseColor("#222222"));
+        text.setTextColor(Color.parseColor("#111827"));
         bubble.addView(text);
 
-        // Datum i vreme slanja (tačka c)
         TextView time = new TextView(requireContext());
         time.setText(m.getTimestamp() > 0 ? timeFmt.format(new Date(m.getTimestamp())) : "");
         time.setTextSize(10);
-        time.setTextColor(Color.parseColor("#9E9E9E"));
+        time.setTextColor(Color.parseColor("#64748B"));
         time.setGravity(Gravity.END);
         bubble.addView(time);
 
