@@ -218,8 +218,9 @@ public class FriendsFragment extends Fragment {
         right.setGravity(Gravity.CENTER_HORIZONTAL);
 
         TextView status = new TextView(requireContext());
-        boolean canPlay = u.isLoggedIn() && !u.isInGame();
-        if (!u.isLoggedIn()) {
+        boolean online = isOnline(u);
+        boolean canPlay = online && !u.isInGame();
+        if (!online) {
             status.setText("● offline");
             status.setTextColor(Color.parseColor("#9E9E9E"));
         } else if (u.isInGame()) {
@@ -337,6 +338,18 @@ public class FriendsFragment extends Fragment {
         inner.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return inner;
+    }
+
+    /**
+     * Online je samo korisnik koji je prijavljen I čiji je heartbeat svež. Time se
+     * korisnik prikazuje offline i kad je app naglo ugašena (heartbeat prestane, lastSeen
+     * zastari) — ne samo kad se eksplicitno izloguje.
+     */
+    private static final long ONLINE_THRESHOLD_MS = 90_000L;
+
+    private boolean isOnline(User u) {
+        return u.isLoggedIn()
+                && (System.currentTimeMillis() - u.getLastSeen() < ONLINE_THRESHOLD_MS);
     }
 
     private int avatarFor(int avatarId) {

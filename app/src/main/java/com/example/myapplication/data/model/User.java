@@ -33,6 +33,11 @@ public class User {
 
     private long lastLoginTime;
 
+    // Poslednji "heartbeat" dok je app u prvom planu. Koristi se da bi se korisnik
+    // prikazao offline i kad je aplikacija naglo ugašena (kill/crash) — tada
+    // heartbeat prestane i lastSeen zastari.
+    private long lastSeen;
+
     public User() {}
 
     public User(String uid, String username, String email, String region) {
@@ -111,6 +116,10 @@ public class User {
     public long getLastLoginTime() { return lastLoginTime; }
 
     public void setLastLoginTime(long lastLogin) { this.lastLoginTime = lastLogin; }
+
+    public long getLastSeen() { return lastSeen; }
+
+    public void setLastSeen(long lastSeen) { this.lastSeen = lastSeen; }
 
     public void setLeagueIcon(String leagueIcon) {
         this.leagueIcon = leagueIcon;

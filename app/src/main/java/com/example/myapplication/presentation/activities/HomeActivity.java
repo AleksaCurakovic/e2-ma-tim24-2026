@@ -62,10 +62,23 @@ public class HomeActivity extends AppCompatActivity {
     // Dolazne pozivnice za partiju (strana primaoca).
     private final GameInviteRepository inviteRepository = new GameInviteRepository();
     private final GameRepository gameRepository = new GameRepository();
+    private final AuthRepository authRepository = new AuthRepository();
     private final Set<String> handledInviteIds = new HashSet<>();
     private boolean inviteDialogShowing = false;
     private boolean inviteServiceStarted = false;
     private String myUid;
+
+    // Heartbeat prisustva: dok je app u prvom planu osvežavamo lastSeen, da bi prijatelji
+    // videli korisnika offline i kad je app naglo ugašena (heartbeat stane → status zastari).
+    private static final long PRESENCE_HEARTBEAT_MS = 30_000L;
+    private final android.os.Handler presenceHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable presenceHeartbeat = new Runnable() {
+        @Override public void run() {
+            authRepository.heartbeat();
+            presenceHandler.postDelayed(this, PRESENCE_HEARTBEAT_MS);
+        }
+    };
 
     private final ActivityResultLauncher<String> notificationPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {});
@@ -104,6 +117,11 @@ public class HomeActivity extends AppCompatActivity {
         // Dok je aktivnost u prvom planu, pozivnice prikazujemo kao dijalog (umesto notifikacije).
         if (isRegistered) {
             InviteForegroundService.setForegroundListener(this::showIncomingInviteDialog);
+            // "Online" = korisnik je trenutno u aplikaciji: postavi loggedIn=true + lastSeen,
+            // pa periodično osvežavaj lastSeen dok je app u prvom planu.
+            authRepository.markOnline(unused -> {}, e -> {});
+            presenceHandler.removeCallbacks(presenceHeartbeat);
+            presenceHandler.postDelayed(presenceHeartbeat, PRESENCE_HEARTBEAT_MS);
         }
     }
 
@@ -111,6 +129,12 @@ public class HomeActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         InviteForegroundService.setForegroundListener(null);
+        // Rotacija/izmena konfiguracije nije napuštanje aplikacije — ne menjamo status.
+        if (isRegistered && !isChangingConfigurations()) {
+            // Korisnik je napustio aplikaciju (pozadina) → "offline".
+            presenceHandler.removeCallbacks(presenceHeartbeat);
+            authRepository.setLoggedIn(false, unused -> {}, e -> {});
+        }
     }
 
     @Override
@@ -259,9 +283,6 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        findViewById(R.id.menuTournaments).setOnClickListener(v -> {
-            closeDropdown();
-        });
 
         findViewById(R.id.menuRankList).setOnClickListener(v -> {
             closeDropdown();

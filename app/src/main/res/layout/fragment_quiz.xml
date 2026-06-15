@@ -74,4 +74,53 @@
 
     </LinearLayout>
 
+    <!-- Ekran "kraj runde" — usklađen sa ostalim mini-igrama -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardFinished"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="32dp"
+        android:visibility="gone"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="@color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="28dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏁"
+                android:textSize="48sp"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tvFinishedTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kraj runde!"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="22sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Računaju se rezultati..."
+                android:textColor="#777777"
+                android:textSize="14sp"
+                android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,6 +3,8 @@ package com.example.myapplication.presentation.fragments;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -101,12 +103,56 @@ public class AsocijacijeFragment extends Fragment {
                 onRoomUpdated(room);
             }
         });
+
+        absentHandler.postDelayed(absentPoll, 2000);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         cancelTimer();
+        absentHandler.removeCallbacks(absentPoll);
+    }
+
+    // ─── Napuštanje protivnika usred runde ─────────────────────────────────────
+
+    /**
+     * Heartbeat protivnika ne menja gameRoom, pa ga periodično proveravamo. Ako protivnik
+     * napusti partiju dok je na NJEGOVOM pod-potezu (asocTurnPlayer = protivnik), preostali
+     * igrač preuzima potez da ne ostane zaglavljen čekajući protivnika.
+     */
+    private final Handler absentHandler = new Handler(Looper.getMainLooper());
+    private final Runnable absentPoll = new Runnable() {
+        @Override public void run() {
+            claimTurnIfOpponentAbsent();
+            absentHandler.postDelayed(this, 2000);
+        }
+    };
+
+    private void claimTurnIfOpponentAbsent() {
+        if (turnFinished || activePhase == null || isMyTurn) return;
+        GameRoom room = vm.gameRoom.getValue();
+        if (room == null || !"asocijacije".equals(room.getCurrentMinigameType())) return;
+        if (opponentPresent()) return;
+
+        // Preuzmi potez i nastavi sam.
+        isMyTurn = true;
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("asocTurnPlayer", myUsername);
+        vm.advancePhase(gameId, updates);
+
+        tvWaiting.setVisibility(View.GONE);
+        tvTimer.setVisibility(View.VISIBLE);
+        String roundLabel = "P1_TURN".equals(activePhase) ? "Runda 1/2" : "Runda 2/2";
+        tvStatus.setText("Asocijacije  •  " + roundLabel + "  (Tvoj red!)");
+
+        if (!boardReady) {
+            loadDataThenStart(room);   // izgradi tablu, primeni stanje, pokreni tajmer
+        } else {
+            cellOpenedThisTurn = false;
+            setInteractionEnabled(true);
+            updateGuessButtonStates();
+        }
     }
 
     // ─── Vezivanje pogleda ────────────────────────────────────────────────────
@@ -413,10 +459,14 @@ public class AsocijacijeFragment extends Fragment {
                 cellOpenedThisTurn = false;
                 updateGuessButtonStates();
                 commitColumnSolved(col);
-            } else {
+            } else if (opponentPresent()) {
                 // Netačno – potez PRELAZI na protivnika
                 setInteractionEnabled(false);
                 commitTurnLost();
+            } else {
+                // Protivnik je napustio partiju — ne predajemo potez njemu; zadržavamo
+                // potez i dozvoljavamo da ponovo otvorimo polje i nastavimo da igramo.
+                keepTurnAfterWrongGuess();
             }
         });
     }
@@ -431,12 +481,33 @@ public class AsocijacijeFragment extends Fragment {
                 localFinalSolved = true;
                 setInteractionEnabled(false);
                 commitFinalSolved();
-            } else {
+            } else if (opponentPresent()) {
                 // Netačno – potez PRELAZI na protivnika
                 setInteractionEnabled(false);
                 commitTurnLost();
+            } else {
+                // Protivnik je napustio partiju — zadržavamo potez i nastavljamo.
+                keepTurnAfterWrongGuess();
             }
         });
+    }
+
+    /**
+     * Protivnik je odsutan: pogrešan odgovor ne predaje potez. Resetujemo "otvoreno
+     * polje u ovom potezu" i ponovo aktiviramo tablu da igrač može da nastavi sam.
+     */
+    private void keepTurnAfterWrongGuess() {
+        cellOpenedThisTurn = false;
+        setInteractionEnabled(true);
+        updateGuessButtonStates();
+    }
+
+    /** Da li je protivnik trenutno prisutan (suprotni slot od mene). */
+    private boolean opponentPresent() {
+        GameRoom room = vm.gameRoom.getValue();
+        if (room == null) return true;
+        boolean iAmP1 = myUsername.equals(room.getPlayerOne());
+        return vm.isPlayerPresent(!iAmP1);
     }
 
     // ─── Firestore upisi ──────────────────────────────────────────────────────

@@ -47,10 +47,7 @@ public class GameFragment extends Fragment {
     private boolean presenceInit = false;
     private boolean amIPlayerOne = false;
     private Runnable watchdogRunnable;
-    private String pendingSkipPhase;   // faza za koju merimo trajanje odsustva
-    private long pendingSkipSince;     // kada je odsustvo prvi put detektovano
-    private String lastSkippedPhase;   // poslednja faza koju smo već preskočili
-    private static final long SKIP_CONFIRM_MS = 1500L;
+    private String lastSkippedPhase;   // poslednja faza koju smo već preskočili (čeka DB sync)
     private static final long WATCHDOG_TICK_MS = 1500L;
 
     private FrameLayout layoutGame;
@@ -273,40 +270,39 @@ public class GameFragment extends Fragment {
     }
 
     /**
-     * Ako je na potezu igrač koji je odsutan, prisutni igrač posle kratke potvrde
-     * odsustva preskače njegov potez (0 bodova) i prelazi dalje — bez čekanja tajmera.
+     * Ako je na potezu igrač koji je odsutan, prisutni igrač preskače njegov potez
+     * (0 bodova) i odmah prelazi dalje — bez čekanja tajmera. Detekcija odsustva je
+     * pouzdana (vm.isPlayerPresent meri svežinu lokalnim satom), pa ovde više nema
+     * potrebe za dodatnim potvrdama/grace periodom: kad protivnik zaista nije prisutan
+     * (10s bez heartbeat-a ili eksplicitno napuštanje), preskačemo odmah → minimalno
+     * čekanje. Lažna detekcija više ne može da pokvari normalne (bonus) runde.
      */
     private void checkAbsentAndSkip() {
         GameRoom room = vm.gameRoom.getValue();
-        if (room == null || "FINISHED".equals(room.getGameState())) { pendingSkipPhase = null; return; }
+        if (room == null || "FINISHED".equals(room.getGameState())) { lastSkippedPhase = null; return; }
 
         String phase = room.getRoundPhase();
         String type  = room.getCurrentMinigameType();
-        if (phase == null || "MINIGAME_DONE".equals(phase)) { pendingSkipPhase = null; return; }
+        if (phase == null || "MINIGAME_DONE".equals(phase)) { lastSkippedPhase = null; return; }
         // Quiz je simultan (oba igrača igraju istovremeno) — rešava se preuzimanjem
         // vođenja napredovanja pitanja, ne preskakanjem faze.
-        if ("koZnaZna".equals(type)) { pendingSkipPhase = null; return; }
+        if ("koZnaZna".equals(type)) { lastSkippedPhase = null; return; }
 
         boolean activeIsP1 = phase.startsWith("P1");
         boolean activeIsP2 = phase.startsWith("P2");
-        if (!activeIsP1 && !activeIsP2) { pendingSkipPhase = null; return; }
+        if (!activeIsP1 && !activeIsP2) { lastSkippedPhase = null; return; }
 
         // Faza se promenila u odnosu na onu koju smo već preskočili → reset oznake.
         if (lastSkippedPhase != null && !lastSkippedPhase.equals(phase)) lastSkippedPhase = null;
 
         boolean iAmActive = (activeIsP1 && amIPlayerOne) || (activeIsP2 && !amIPlayerOne);
-        if (iAmActive) { pendingSkipPhase = null; return; } // svoj potez igram normalno
+        if (iAmActive) return; // svoj potez igram normalno — NIKAD ga ne preskačem
 
-        if (vm.isPlayerPresent(activeIsP1)) { pendingSkipPhase = null; return; } // protivnik je prisutan
-        if (phase.equals(lastSkippedPhase)) return; // već poslat preskok za ovu fazu
-
-        long now = System.currentTimeMillis();
-        if (!phase.equals(pendingSkipPhase)) { pendingSkipPhase = phase; pendingSkipSince = now; return; }
-        if (now - pendingSkipSince < SKIP_CONFIRM_MS) return;
+        if (vm.isPlayerPresent(activeIsP1)) return; // protivnik je prisutan → ne diramo rundu
+        if (phase.equals(lastSkippedPhase)) return; // već poslat preskok za ovu fazu, čekamo DB
 
         performAbsentSkip(type, phase, activeIsP1);
         lastSkippedPhase = phase;
-        pendingSkipPhase = null;
     }
 
     private void performAbsentSkip(String type, String phase, boolean absentIsP1) {

@@ -13,6 +13,9 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class AuthRepository {
 
     private final FirebaseAuth auth;
@@ -194,6 +197,23 @@ public class AuthRepository {
         updateOwnField("loggedIn", loggedIn, onSuccess, onFailure);
     }
 
+    /**
+     * Označava korisnika online: postavlja loggedIn=true i osvežava lastSeen. Pozива се
+     * pri ulasku u prvi plan i potom periodično (heartbeat). Prijatelji ga vide online
+     * samo dok je lastSeen svež — kad se app ugasi, heartbeat stane i status zastari.
+     */
+    public void markOnline(OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("loggedIn", true);
+        updates.put("lastSeen", System.currentTimeMillis());
+        updateOwnFields(updates, onSuccess, onFailure);
+    }
+
+    /** Periodični heartbeat — osvežava samo lastSeen dok je app u prvom planu. */
+    public void heartbeat() {
+        updateOwnField("lastSeen", System.currentTimeMillis(), u -> {}, e -> {});
+    }
+
     /** Postavlja status da li korisnik trenutno učestvuje u partiji. */
     public void setInGame(boolean inGame,
                           OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
@@ -209,6 +229,19 @@ public class AuthRepository {
         }
         db.collection("users").document(firebaseUser.getUid())
                 .update(field, value)
+                .addOnSuccessListener(onSuccess)
+                .addOnFailureListener(onFailure);
+    }
+
+    private void updateOwnFields(Map<String, Object> updates,
+                                 OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null || firebaseUser.isAnonymous()) {
+            onSuccess.onSuccess(null);
+            return;
+        }
+        db.collection("users").document(firebaseUser.getUid())
+                .update(updates)
                 .addOnSuccessListener(onSuccess)
                 .addOnFailureListener(onFailure);
     }

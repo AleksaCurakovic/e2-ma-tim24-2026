@@ -142,6 +142,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         super.onDestroyView();
         cancelRoundTimer();
         cancelStopAutoTimer();
+        cancelAwaitOpponentPoll();
     }
 
     @Override
@@ -163,7 +164,7 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
 
     // --- MASTER STATE CONTROLLER ---
     private void handleStateUpdate(GameRoom room) {
-        if (!"mojbroj".equals(room.getCurrentMinigameType())) return;
+        if (!"mojBroj".equals(room.getCurrentMinigameType())) return;
         String phase = room.getRoundPhase();
         if (phase == null) return;
 
@@ -249,22 +250,65 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
             }
         }
 
-        if (submitted && !scoringDone) {
-            Boolean p1Done = room.getMojBrojP1Submitted();
-            Boolean p2Done = room.getMojBrojP2Submitted();
-            if (Boolean.TRUE.equals(p1Done) && Boolean.TRUE.equals(p2Done)) {
-                scoringDone = true;
-                completedPhases.add(activePhase);
+        tryScoreIfReady(room);
+    }
 
-                // HOST ELECTION: Only the round owner calculates points & advances the phase
-                if (isRoundOwner) {
-                    scoreAndAdvance(room);
-                } else {
-                    tvStatus.setText("Računanje rezultata...");
-                }
-            }
+    /**
+     * Pokušava da oboduje i napreduje rundu kad je sve spremno. Bodujemo kada su OBA
+     * igrača predala izraz, ILI kada je protivnik napustio partiju (tada ne čekamo
+     * njegovu potvrdu — inače bi preostali igrač ostao zaglavljen na ekranu MojBroj).
+     */
+    private void tryScoreIfReady(GameRoom room) {
+        if (!submitted || scoringDone || activePhase == null) return;
+
+        boolean bothSubmitted = Boolean.TRUE.equals(room.getMojBrojP1Submitted())
+                && Boolean.TRUE.equals(room.getMojBrojP2Submitted());
+        boolean oppGone = !opponentPresent();
+        if (!bothSubmitted && !oppGone) return;
+
+        scoringDone = true;
+        completedPhases.add(activePhase);
+        cancelAwaitOpponentPoll();
+
+        // Normalno samo vlasnik runde boduje/napreduje. Ali ako je protivnik otišao,
+        // preostali igrač uvek vodi napredovanje (i kad nije vlasnik runde).
+        if (isRoundOwner || oppGone) {
+            scoreAndAdvance(room);
+        } else {
+            tvStatus.setText("Računanje rezultata...");
         }
     }
+
+    /** Da li je protivnik trenutno prisutan (suprotni slot od mene). */
+    private boolean opponentPresent() {
+        GameRoom room = vm.gameRoom.getValue();
+        if (room == null) return true;
+        boolean iAmP1 = myUsername.equals(room.getPlayerOne());
+        return vm.isPlayerPresent(!iAmP1);
+    }
+
+    /**
+     * Heartbeat protivnika se upisuje u zaseban dokument i NE menja gameRoom, pa observer
+     * ne bi ponovo okinuo proveru nakon što protivnik nestane. Zato dok čekamo protivnika
+     * periodično proveravamo da li je otišao da bismo mogli da napredujemo.
+     */
+    private void startAwaitOpponentPoll() {
+        cancelAwaitOpponentPoll();
+        handler.postDelayed(awaitOpponentPoll, 1500);
+    }
+
+    private void cancelAwaitOpponentPoll() {
+        handler.removeCallbacks(awaitOpponentPoll);
+    }
+
+    private final Runnable awaitOpponentPoll = new Runnable() {
+        @Override public void run() {
+            if (!isAdded() || scoringDone) return;
+            GameRoom room = vm.gameRoom.getValue();
+            if (room != null) tryScoreIfReady(room);
+            if (!scoringDone) handler.postDelayed(this, 1500);
+        }
+    };
 
     private void onStopTarget() {
         if (targetRevealed || !isRoundOwner) return;
@@ -462,10 +506,15 @@ public class MojBrojFragment extends Fragment implements SensorEventListener {
         boolean isP1 = myUsername.equals(vm.gameRoom.getValue() != null
                 ? vm.gameRoom.getValue().getPlayerOne() : "");
         vm.submitMojBrojResult(gameId, isP1, result);
+
+        // Ako protivnik ne potvrdi (jer je napustio partiju), periodična provera
+        // će ipak oboduje i napreduje rundu da ne ostanemo zaglavljeni.
+        startAwaitOpponentPoll();
     }
 
     private void scoreAndAdvance(GameRoom room) {
-        int target = ((Number) room.getMojBrojTarget()).intValue();
+        Object t = room.getMojBrojTarget();
+        int target = (t instanceof Number) ? ((Number) t).intValue() : 0;
 
         int p1Res =  room.getMojBrojP1Result();
         int p2Res =  room.getMojBrojP2Result();

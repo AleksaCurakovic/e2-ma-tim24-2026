@@ -42,10 +42,17 @@ public class GameViewModel extends ViewModel {
     // --- Presence (heartbeat) ---
     // [p1LastSeen, p2LastSeen] u milisekundama; 0 = još neviđen.
     public final MutableLiveData<long[]> presence = new MutableLiveData<>(new long[]{0, 0});
-    private static final long ABSENT_THRESHOLD_MS = 5_000L;
+    private static final long ABSENT_THRESHOLD_MS = 10_000L;
     private static final long HEARTBEAT_MS = 2_000L;
+    private static final long ABSENT_SENTINEL = 1L; // markAbsent upisuje ovu vrednost (eksplicitno napuštanje)
     private Handler heartbeatHandler;
     private boolean presenceStarted = false;
+
+    // Svežinu heartbeat-a merimo LOKALNIM satom — imuno na razliku satova između uređaja
+    // (clock skew). Pamtimo poslednju viđenu vrednost i LOKALNO vreme kad se ta vrednost
+    // promenila; protivnik je odsutan tek kad njegova vrednost prestane da se menja.
+    private long p1LastValue = 0L, p2LastValue = 0L;
+    private long p1ChangedAtLocal = 0L, p2ChangedAtLocal = 0L;
 
     // =========================================================================
     // MATCHMAKING
@@ -95,9 +102,17 @@ public class GameViewModel extends ViewModel {
         if (presenceStarted || gameId == null) return;
         presenceStarted = true;
 
+        // Resetuj praćenje svežine za novu partiju.
+        p1LastValue = 0L; p2LastValue = 0L;
+        p1ChangedAtLocal = 0L; p2ChangedAtLocal = 0L;
+
         repository.listenPresence(gameId, data -> {
             long p1 = toLong(data.get("p1LastSeen"));
             long p2 = toLong(data.get("p2LastSeen"));
+            long nowLocal = System.currentTimeMillis();
+            // Beležimo LOKALNO vreme svaki put kad se vrednost promeni (stigao nov heartbeat).
+            if (p1 != p1LastValue) { p1LastValue = p1; p1ChangedAtLocal = nowLocal; }
+            if (p2 != p2LastValue) { p2LastValue = p2; p2ChangedAtLocal = nowLocal; }
             presence.postValue(new long[]{p1, p2});
         }, e -> { /* tiho */ });
 
@@ -136,15 +151,23 @@ public class GameViewModel extends ViewModel {
     }
 
     /**
-     * Da li je igrač trenutno prisutan. Dok ga nismo ni videli (lastSeen==0) tretiramo
-     * ga kao prisutnog (igra tek počinje); odsutan je tek kad mu heartbeat zastari.
+     * Da li je igrač trenutno prisutan. Svežinu merimo LOKALNIM satom (vreme otkad se
+     * njegova heartbeat vrednost poslednji put promenila), pa je provera imuna na razliku
+     * satova između uređaja — što je ranije lažno proglašavalo prisutnog igrača odsutnim
+     * i kvarilo normalne (bonus) runde.
+     *
+     * Pravila:
+     *  - vrednost == 0  → još ga nismo videli (partija tek počinje) → prisutan.
+     *  - vrednost == 1  → eksplicitno je napustio partiju (sentinel) → odsutan.
+     *  - inače          → prisutan dok mu vrednost sveže stiže (lokalno merenje).
      */
     public boolean isPlayerPresent(boolean isPlayerOne) {
-        long[] p = presence.getValue();
-        if (p == null) return true;
-        long seen = isPlayerOne ? p[0] : p[1];
-        if (seen == 0) return true;
-        return System.currentTimeMillis() - seen < ABSENT_THRESHOLD_MS;
+        long value     = isPlayerOne ? p1LastValue : p2LastValue;
+        long changedAt = isPlayerOne ? p1ChangedAtLocal : p2ChangedAtLocal;
+        if (value == ABSENT_SENTINEL) return false; // eksplicitno napuštanje
+        if (value == 0L) return true;               // još neviđen → tretiramo kao prisutnog
+        if (changedAt == 0L) return true;           // vrednost još nije lokalno zabeležena
+        return System.currentTimeMillis() - changedAt < ABSENT_THRESHOLD_MS;
     }
 
     private static long toLong(Object o) {

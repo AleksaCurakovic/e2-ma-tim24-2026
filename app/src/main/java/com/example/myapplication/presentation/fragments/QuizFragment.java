@@ -48,6 +48,7 @@ public class QuizFragment extends Fragment {
 
     private TextView tvQuestionCounter, tvTimer, tvQuestion;
     private LinearLayout layoutAnswers;
+    private View cardHeader, cardFinished;
 
     private CountDownTimer turnTimer = null;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -186,13 +187,22 @@ public class QuizFragment extends Fragment {
         }
     }
 
-    private void showFinished() { cancelTimer(); layoutAnswers.removeAllViews(); tvQuestion.setText("Kraj!"); }
+    private void showFinished() {
+        cancelTimer();
+        layoutAnswers.removeAllViews();
+        layoutAnswers.setVisibility(View.GONE);
+        tvQuestion.setVisibility(View.GONE);
+        if (cardHeader != null) cardHeader.setVisibility(View.GONE);
+        if (cardFinished != null) cardFinished.setVisibility(View.VISIBLE);
+    }
     private void cancelTimer() { if (turnTimer != null) turnTimer.cancel(); }
     private void initializeViews(View view) {
         tvQuestionCounter = view.findViewById(R.id.tvQuestionCounter);
         tvTimer = view.findViewById(R.id.tvTimer);
         tvQuestion = view.findViewById(R.id.tvQuestion);
         layoutAnswers = view.findViewById(R.id.layoutAnswers);
+        cardHeader = view.findViewById(R.id.cardHeader);
+        cardFinished = view.findViewById(R.id.cardFinished);
     }
     private boolean isPlayerOne(GameRoom room) { return myUsername != null && myUsername.equals(room.getPlayerOne()); }
 
