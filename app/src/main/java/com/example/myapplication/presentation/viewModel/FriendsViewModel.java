@@ -93,6 +93,24 @@ public class FriendsViewModel extends ViewModel {
                 e -> message.postValue("Greška pri dodavanju: " + e.getMessage()));
     }
 
+    public void addFriendByUid(String myUid, String friendUid, List<String> existingFriendUids, Runnable onAdded) {
+        if (friendUid == null || friendUid.trim().isEmpty()) {
+            message.postValue("QR kod nije validan.");
+            return;
+        }
+        if (friendUid.equals(myUid)) {
+            message.postValue("Ne mozes dodati sebe u prijatelje.");
+            return;
+        }
+        if (existingFriendUids != null && existingFriendUids.contains(friendUid)) {
+            message.postValue("Ovaj igrac je vec u listi prijatelja.");
+            return;
+        }
+        friendRepo.getUser(friendUid,
+                friend -> addFriend(myUid, friend, onAdded),
+                e -> message.postValue("Korisnik iz QR koda nije pronadjen."));
+    }
+
     // --------------------------------------------------------------- POZIVNICE
 
     /** Šalje pozivnicu prijatelju i pokreće praćenje odgovora. */

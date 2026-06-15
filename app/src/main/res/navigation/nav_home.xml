@@ -36,6 +36,11 @@
         android:label="Rank List"/>
 
     <fragment
+        android:id="@+id/regionFragment"
+        android:name="com.example.myapplication.presentation.fragments.RegionFragment"
+        android:label="Regions"/>
+
+    <fragment
         android:id="@+id/chatFragment"
         android:name="com.example.myapplication.presentation.fragments.ChatFragment"
         android:label="Chat"/>

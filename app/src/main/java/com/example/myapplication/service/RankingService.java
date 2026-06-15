@@ -92,6 +92,20 @@ public class RankingService {
             final int tokens = tokensForRank(rank, monthly);
             final int finalRank = rank;
 
+            if (monthly) {
+                repository.applyRegionAvatarFrames(prevId, unused -> {}, e -> {});
+            }
+
+            if (monthly && finalRank == 0) {
+                repository.applyMonthlyNonPlacementPenaltyAndMarkClaimed(user.getUid(), claimField, prevId,
+                        unused -> {
+                            user.setLastClaimedMonthlyCycle(prevId);
+                            onComplete.onSuccess(null);
+                        },
+                        e -> onComplete.onSuccess(null));
+                return;
+            }
+
             repository.awardTokensAndMarkClaimed(user.getUid(), tokens, claimField, prevId,
                     unused -> {
                         // Lokalno ažuriramo marker da se u istoj sesiji ne obradi ponovo.

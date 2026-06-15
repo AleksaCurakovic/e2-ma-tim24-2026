@@ -1,6 +1,7 @@
 package com.example.myapplication.data.repository;
 
 import com.example.myapplication.data.model.User;
+import com.example.myapplication.util.LeagueUtil;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.AuthCredential;
@@ -38,6 +39,7 @@ public class AuthRepository {
                                 String uid = firebaseUser.getUid();
                                 firebaseUser.sendEmailVerification();
                                 User user = new User(uid, username, email, region);
+                                user.setQrCode("FRIEND:" + uid);
                                 db.collection("users").document(uid)
                                         .set(user)
                                         .addOnSuccessListener(onSuccess)
@@ -137,7 +139,13 @@ public class AuthRepository {
 
                     if (shouldAward) {
                         Long currentTokens = snapshot.getLong("tokens");
-                        long newTokens = (currentTokens != null ? currentTokens : 0) + 5;
+                        Long storedLeague = snapshot.getLong("leagueLevel");
+                        Long storedStars = snapshot.getLong("stars");
+                        int leagueLevel = storedLeague != null
+                                ? storedLeague.intValue()
+                                : LeagueUtil.levelForStars(storedStars != null ? storedStars : 0);
+                        long newTokens = (currentTokens != null ? currentTokens : 0)
+                                + LeagueUtil.dailyTokensForLevel(leagueLevel);
 
                         db.collection("users").document(uid)
                                 .update(
@@ -262,7 +270,7 @@ public class AuthRepository {
                         return;
                     }
                     db.collection("users").document(uid)
-                            .update("tokens", tokens - 5)
+                            .update("tokens", tokens - 1)
                             .addOnSuccessListener(onSuccess)
                             .addOnFailureListener(onFailure);
                 })
@@ -281,18 +289,38 @@ public class AuthRepository {
         db.collection("users").document(uid).get()
                 .addOnSuccessListener(snapshot -> {
                     long currentStars = snapshot.getLong("stars") != null ? snapshot.getLong("stars") : 0;
-                    long currentTokens = snapshot.getLong("tokens") != null ? snapshot.getLong("tokens") : 0;
 
                     long newStars = Math.max(0, currentStars + starsDelta);
-                    long earnedTokens = newStars / 50;
-                    long remainingStars = newStars % 50;
-                    long newTokens = currentTokens + earnedTokens;
+                    int oldLeague = LeagueUtil.levelForStars(currentStars);
+                    int newLeague = LeagueUtil.levelForStars(newStars);
+
+                    java.util.Map<String, Object> updates = new java.util.HashMap<>();
+                    updates.put("stars", newStars);
+                    updates.put("leagueLevel", newLeague);
+                    updates.put("leagueName", LeagueUtil.nameForLevel(newLeague));
+                    updates.put("leagueIcon", LeagueUtil.iconForLevel(newLeague));
+                    if (oldLeague != newLeague) {
+                        String direction = newLeague > oldLeague ? "Usao si u " : "Pao si u ";
+                        updates.put("pendingLeagueChange", direction + LeagueUtil.nameForLevel(newLeague));
+                    }
 
                     db.collection("users").document(uid)
-                            .update("stars", remainingStars, "tokens", newTokens)
+                            .update(updates)
                             .addOnSuccessListener(onSuccess)
                             .addOnFailureListener(onFailure);
                 })
+                .addOnFailureListener(onFailure);
+    }
+
+    public void clearPendingLeagueChange(OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null || firebaseUser.isAnonymous()) {
+            onSuccess.onSuccess(null);
+            return;
+        }
+        db.collection("users").document(firebaseUser.getUid())
+                .update("pendingLeagueChange", null)
+                .addOnSuccessListener(onSuccess)
                 .addOnFailureListener(onFailure);
     }
 

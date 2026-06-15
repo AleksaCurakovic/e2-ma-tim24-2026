@@ -40,6 +40,10 @@ public class HomeViewModel extends ViewModel {
         authService.applyGameRewards(starsDelta, onSuccess, onFailure);
     }
 
+    public void clearPendingLeagueChange() {
+        authService.clearPendingLeagueChange(unused -> loadUser(), e -> {});
+    }
+
     public void changePassword(String oldPassword, String newPassword) {
         authService.changePassword(oldPassword, newPassword,
                 unused -> passwordChangeResult.setValue("success"),

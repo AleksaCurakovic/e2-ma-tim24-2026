@@ -3,7 +3,9 @@ package com.example.myapplication.data.repository;
 import androidx.annotation.NonNull;
 
 import com.example.myapplication.data.model.RankingEntry;
+import com.example.myapplication.data.model.User;
 import com.example.myapplication.util.CycleUtil;
+import com.example.myapplication.util.LeagueUtil;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentReference;
@@ -125,5 +127,88 @@ public class RankingRepository {
                 .update(updates)
                 .addOnSuccessListener(onSuccess)
                 .addOnFailureListener(onFailure);
+    }
+
+    /** Mesečna kazna: ako korisnik nije rangiran, gubi 30% ukupnih zvezda i liga se preračunava. */
+    public void applyMonthlyNonPlacementPenaltyAndMarkClaimed(@NonNull String uid,
+                                                              @NonNull String claimField,
+                                                              @NonNull String cycleId,
+                                                              OnSuccessListener<Void> onSuccess,
+                                                              OnFailureListener onFailure) {
+        db.collection(COLLECTION_USERS).document(uid)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    long currentStars = snapshot.getLong("stars") != null ? snapshot.getLong("stars") : 0;
+                    long newStars = Math.max(0, Math.round(Math.floor(currentStars * 0.70)));
+                    int oldLeague = LeagueUtil.levelForStars(currentStars);
+                    int newLeague = LeagueUtil.levelForStars(newStars);
+
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("stars", newStars);
+                    updates.put("leagueLevel", newLeague);
+                    updates.put("leagueName", LeagueUtil.nameForLevel(newLeague));
+                    updates.put("leagueIcon", LeagueUtil.iconForLevel(newLeague));
+                    updates.put(claimField, cycleId);
+                    if (oldLeague != newLeague) {
+                        String direction = newLeague > oldLeague ? "Usao si u " : "Pao si u ";
+                        updates.put("pendingLeagueChange", direction + LeagueUtil.nameForLevel(newLeague));
+                    }
+
+                    db.collection(COLLECTION_USERS).document(uid)
+                            .update(updates)
+                            .addOnSuccessListener(onSuccess)
+                            .addOnFailureListener(onFailure);
+                })
+                .addOnFailureListener(onFailure);
+    }
+
+    /**
+     * Na osnovu mesečne rang liste regiona postavlja okvir avatara korisnicima iz
+     * prva tri regiona prethodnog ciklusa.
+     */
+    public void applyRegionAvatarFrames(@NonNull String monthlyCycleId,
+                                        OnSuccessListener<Void> onSuccess,
+                                        OnFailureListener onFailure) {
+        getRanking(monthlyCycleId, ranking ->
+                db.collection(COLLECTION_USERS).get()
+                        .addOnSuccessListener(usersSnapshot -> {
+                            Map<String, User> usersByUid = new HashMap<>();
+                            Map<String, Integer> starsByRegion = new HashMap<>();
+                            for (com.google.firebase.firestore.QueryDocumentSnapshot doc : usersSnapshot) {
+                                User user = doc.toObject(User.class);
+                                if (user != null && user.getUid() != null) {
+                                    usersByUid.put(user.getUid(), user);
+                                }
+                            }
+
+                            for (RankingEntry entry : ranking) {
+                                User user = usersByUid.get(entry.getUid());
+                                if (user == null || user.getRegion() == null || user.getRegion().isEmpty()) continue;
+                                int current = starsByRegion.containsKey(user.getRegion())
+                                        ? starsByRegion.get(user.getRegion()) : 0;
+                                starsByRegion.put(user.getRegion(), current + entry.getStarsEarned());
+                            }
+
+                            List<Map.Entry<String, Integer>> regions = new ArrayList<>(starsByRegion.entrySet());
+                            regions.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+                            Map<String, String> frameByRegion = new HashMap<>();
+                            if (regions.size() > 0) frameByRegion.put(regions.get(0).getKey(), "gold");
+                            if (regions.size() > 1) frameByRegion.put(regions.get(1).getKey(), "silver");
+                            if (regions.size() > 2) frameByRegion.put(regions.get(2).getKey(), "bronze");
+
+                            com.google.firebase.firestore.WriteBatch batch = db.batch();
+                            for (com.google.firebase.firestore.QueryDocumentSnapshot doc : usersSnapshot) {
+                                User user = doc.toObject(User.class);
+                                String frame = "";
+                                if (user != null && user.getRegion() != null) {
+                                    frame = frameByRegion.containsKey(user.getRegion())
+                                            ? frameByRegion.get(user.getRegion()) : "";
+                                }
+                                batch.update(doc.getReference(), "avatarFrameColor", frame);
+                            }
+                            batch.commit().addOnSuccessListener(onSuccess).addOnFailureListener(onFailure);
+                        })
+                        .addOnFailureListener(onFailure),
+                onFailure);
     }
 }

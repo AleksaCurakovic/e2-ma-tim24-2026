@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -23,6 +24,10 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.myapplication.R;
 import com.example.myapplication.presentation.activities.AuthActivity;
 import com.example.myapplication.presentation.viewModel.HomeViewModel;
+import com.example.myapplication.util.LeagueUtil;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 public class ProfileFragment extends Fragment {
 
@@ -62,6 +67,8 @@ public class ProfileFragment extends Fragment {
         TextView tvStatsQuiz = view.findViewById(R.id.tvStatsQuiz);
         TextView tvStatsSpojnice = view.findViewById(R.id.tvStatsSpojnice);
         TextView tvStatsAsocijacije = view.findViewById(R.id.tvStatsAsocijacije);
+        TextView tvLeagueProgress = view.findViewById(R.id.tvLeagueProgress);
+        TextView tvFrameBadge = view.findViewById(R.id.tvFrameBadge);
 
         view.findViewById(R.id.btnAvatarFriends).setOnClickListener(v -> viewModel.updateAvatar(0));
         view.findViewById(R.id.btnAvatarBusiness).setOnClickListener(v -> viewModel.updateAvatar(1));
@@ -115,11 +122,33 @@ public class ProfileFragment extends Fragment {
             tvStars.setText("Zvezde: " + user.getStars());
             tvRegion.setText("Region: " + (user.getRegion() != null ? user.getRegion() : "-"));
             ivAvatar.setImageResource(avatarFor(user.getAvatarId()));
-            ivQr.setImageBitmap(createFriendCodeBitmap(user.getUsername()));
+            applyAvatarFrame(ivAvatar, user.getAvatarFrameColor());
+            String qrContent = user.getQrCode() != null && !user.getQrCode().isEmpty()
+                    ? user.getQrCode()
+                    : "FRIEND:" + user.getUid();
+            ivQr.setImageBitmap(createFriendCodeBitmap(qrContent));
 
             int resId = requireContext().getResources().getIdentifier(
                     user.getLeagueIcon(), "drawable", requireContext().getPackageName());
             if (resId != 0) ivLeague.setImageResource(resId);
+
+            int level = user.getLeagueLevel() > 0
+                    ? user.getLeagueLevel()
+                    : LeagueUtil.levelForStars(user.getStars());
+            int next = LeagueUtil.nextThresholdForLevel(level);
+            if (next < 0) {
+                tvLeagueProgress.setText("Najvisa liga dostignuta");
+            } else {
+                int missing = Math.max(0, next - user.getStars());
+                tvLeagueProgress.setText("Do sledece lige: " + missing + " zvezda");
+            }
+            String frame = user.getAvatarFrameColor();
+            if (frame != null && !frame.isEmpty()) {
+                tvFrameBadge.setVisibility(View.VISIBLE);
+                tvFrameBadge.setText("Okvir avatara: " + frameLabel(frame));
+            } else {
+                tvFrameBadge.setVisibility(View.GONE);
+            }
 
             int total = user.getTotalGames();
             int won = user.getWonGames();
@@ -129,9 +158,9 @@ public class ProfileFragment extends Fragment {
             tvStatsGames.setText("Ukupno odigranih partija: " + total);
             tvStatsWinLoss.setText("Pobede/porazi: " + won + "/" + lost
                     + " (" + winPercent + "% / " + lossPercent + "%)");
-            tvStatsQuiz.setText("Ko zna zna: odnos pogodjenih i promasenih pitanja.");
-            tvStatsSpojnice.setText("Spojnice: procenat uspesno povezanih pojmova.");
-            tvStatsAsocijacije.setText("Asocijacije: odnos resenih i neresenih asocijacija.");
+            tvStatsQuiz.setText("Ko zna zna: rezultat ulazi u ukupan skor partije.");
+            tvStatsSpojnice.setText("Spojnice: povezani pojmovi donose poene u partiji.");
+            tvStatsAsocijacije.setText("Asocijacije: resenja kolona i konacno resenje donose poene.");
         });
 
         viewModel.passwordChangeResult.observe(getViewLifecycleOwner(), result -> {
@@ -165,7 +194,15 @@ public class ProfileFragment extends Fragment {
         return avatarDrawables[avatarId];
     }
 
-    private Bitmap createFriendCodeBitmap(String username) {
+    private Bitmap createFriendCodeBitmap(String content) {
+        try {
+            return new BarcodeEncoder().encodeBitmap(content, BarcodeFormat.QR_CODE, 360, 360);
+        } catch (WriterException e) {
+            return createFallbackCodeBitmap(content);
+        }
+    }
+
+    private Bitmap createFallbackCodeBitmap(String content) {
         int size = 240;
         int cells = 15;
         int cell = size / cells;
@@ -175,7 +212,7 @@ public class ProfileFragment extends Fragment {
         paint.setStyle(Paint.Style.FILL);
         canvas.drawColor(Color.WHITE);
 
-        int seed = username != null ? username.hashCode() : 0;
+        int seed = content != null ? content.hashCode() : 0;
         for (int y = 0; y < cells; y++) {
             for (int x = 0; x < cells; x++) {
                 boolean finder = (x < 4 && y < 4) || (x > 10 && y < 4) || (x < 4 && y > 10);
@@ -185,5 +222,30 @@ public class ProfileFragment extends Fragment {
             }
         }
         return bitmap;
+    }
+
+    private void applyAvatarFrame(ImageView avatar, String frame) {
+        int strokeColor;
+        if ("gold".equals(frame)) {
+            strokeColor = Color.parseColor("#F59E0B");
+        } else if ("silver".equals(frame)) {
+            strokeColor = Color.parseColor("#94A3B8");
+        } else if ("bronze".equals(frame)) {
+            strokeColor = Color.parseColor("#B45309");
+        } else {
+            strokeColor = Color.parseColor("#CBD5E1");
+        }
+        GradientDrawable bg = new GradientDrawable();
+        bg.setShape(GradientDrawable.OVAL);
+        bg.setColor(Color.WHITE);
+        bg.setStroke(5, strokeColor);
+        avatar.setBackground(bg);
+    }
+
+    private String frameLabel(String frame) {
+        if ("gold".equals(frame)) return "zlatni";
+        if ("silver".equals(frame)) return "srebrni";
+        if ("bronze".equals(frame)) return "bronzani";
+        return frame;
     }
 }

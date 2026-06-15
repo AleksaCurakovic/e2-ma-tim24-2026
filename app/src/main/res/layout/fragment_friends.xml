@@ -3,10 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
+    android:background="#F6F8FC"
+    android:clipToPadding="false"
     android:paddingTop="56dp"
-    android:paddingBottom="64dp"
-    android:clipToPadding="false">
+    android:paddingBottom="64dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,24 +17,24 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             android:text="Prijatelji"
+            android:textColor="#111827"
             android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#333"
-            android:layout_marginBottom="12dp" />
+            android:textStyle="bold" />
 
-        <!-- Pretraga -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            app:cardBackgroundColor="#FFFFFF"
             app:cardCornerRadius="12dp"
             app:cardElevation="3dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:padding="8dp">
 
                 <EditText
@@ -42,58 +42,67 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="Pretraži po korisničkom imenu"
-                    android:inputType="text"
+                    android:background="#F8FAFC"
+                    android:hint="Pretrazi po korisnickom imenu"
                     android:imeOptions="actionSearch"
-                    android:padding="8dp"
-                    android:background="@android:color/transparent" />
+                    android:inputType="text"
+                    android:padding="10dp"
+                    android:textColor="#111827"
+                    android:textColorHint="#64748B" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSearch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Traži"
-                    app:cornerRadius="20dp" />
+                    android:layout_marginStart="8dp"
+                    android:text="Trazi"
+                    app:cornerRadius="18dp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Rezultati pretrage -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScanQr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Skeniraj QR kod prijatelja"
+            app:cornerRadius="18dp" />
+
         <TextView
             android:id="@+id/tvSearchHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:text="Rezultati pretrage"
+            android:textColor="#475569"
             android:textSize="15sp"
             android:textStyle="bold"
-            android:textColor="#555"
             android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/searchContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="6dp" />
+            android:layout_marginTop="6dp"
+            android:orientation="vertical" />
 
-        <!-- Lista prijatelja -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:text="Moji prijatelji"
+            android:textColor="#475569"
             android:textSize="15sp"
-            android:textStyle="bold"
-            android:textColor="#555" />
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvFriendsEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="24dp"
             android:gravity="center"
-            android:text="Još nemaš prijatelja. Pronađi ih pretragom iznad."
-            android:textColor="#999"
+            android:paddingTop="24dp"
+            android:text="Jos nemas prijatelja. Pronadji ih pretragom ili QR kodom."
+            android:textColor="#64748B"
             android:textSize="14sp"
             android:visibility="gone" />
 
@@ -101,8 +110,8 @@
             android:id="@+id/friendsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="6dp" />
+            android:layout_marginTop="6dp"
+            android:orientation="vertical" />
 
     </LinearLayout>
 </ScrollView>

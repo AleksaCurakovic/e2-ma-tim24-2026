@@ -138,7 +138,7 @@
             android:id="@+id/menuRegions"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="  🗺️  Region Chat"
+            android:text="  Regioni"
             android:textSize="15sp"
             android:gravity="center_vertical"
             android:background="?attr/selectableItemBackground"/>
